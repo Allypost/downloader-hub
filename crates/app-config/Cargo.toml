@@ -1,0 +1,28 @@
+[package]
+name = "app-config"
+version.workspace = true
+authors.workspace = true
+description.workspace = true
+edition.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow.workspace = true
+clap = { version = "4.3.3", features = ["derive", "env"] }
+directories = "5.0.1"
+once_cell.workspace = true
+resolve-path = "0.1.0"
+serde.workspace = true
+serde_json.workspace = true
+toml = "0.8.10"
+url = { version = "2.5.0", features = ["serde"] }
+validator = { version = "0.16.1", features = ["derive"] }
+which = "6.0.0"
+
+
+[features]
+default = []
+
+[lints]
+workspace = true

@@ -1,0 +1,20 @@
+[package]
+name = "app-entities"
+version.workspace = true
+authors.workspace = true
+description.workspace = true
+edition.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow.workspace = true
+chrono = { version = "0.4.31", features = ["alloc", "serde"] }
+http = "1.0.0"
+http-serde = "2.0.0"
+sea-orm = "0.12.3"
+serde.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

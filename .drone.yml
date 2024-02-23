@@ -1,0 +1,89 @@
+---
+kind: pipeline
+type: docker
+name: build-image
+
+node:
+  m_name: tethys
+
+steps:
+  - name: build-docker-image
+    image: docker:dind
+    pull: always
+    environment:
+      _DOCKER_BUILD_IMAGE: "index.docker.io/allypost/downloader-hub"
+      _DOCKER_USERNAME:
+        from_secret: DOCKER_HUB_USERNAME
+      _DOCKER_PASSWORD:
+        from_secret: DOCKER_HUB_PASSWORD
+      # Use plain logs for docker build instead of fancy buildkit logs
+      BUILDKIT_PROGRESS: "plain"
+    commands:
+      - echo "Building '$_DOCKER_BUILD_IMAGE:${DRONE_COMMIT_SHA}' on '${DRONE_STAGE_MACHINE}'"
+      - docker build --pull --compress --label "net.allypost.downloader-hub=true" --tag "$_DOCKER_BUILD_IMAGE":latest --tag "$_DOCKER_BUILD_IMAGE":"${DRONE_COMMIT_SHA}" --file ./.docker/app/Dockerfile .
+      - docker login -u "$_DOCKER_USERNAME" -p "$_DOCKER_PASSWORD"
+      - docker push --all-tags "$_DOCKER_BUILD_IMAGE"
+      - docker image rm "$_DOCKER_BUILD_IMAGE:${DRONE_COMMIT_SHA}"
+    volumes:
+      - name: docker
+        path: /var/run/docker.sock
+
+  - name: notify-watchtower
+    failure: ignore
+    image: alpine
+    environment:
+      _WATCHTOWER_DOMAIN:
+        from_secret: WATCHTOWER_DOMAIN
+      _WATCHTOWER_TOKEN:
+        from_secret: WATCHTOWER_TOKEN
+    commands:
+      - apk add curl
+      - 'curl -sL -H "Authorization: Bearer $_WATCHTOWER_TOKEN" "$_WATCHTOWER_DOMAIN/v1/update"'
+
+  - name: notify-telegram
+    failure: ignore
+    image: appleboy/drone-telegram
+    pull: always
+    settings:
+      token:
+        from_secret: TELEGRAM_DEPLOY_BOT_TOKEN
+      to:
+        from_secret: TELEGRAM_MY_USER_ID
+      format: MarkdownV2
+      template_vars:
+        machine: ${DRONE_STAGE_MACHINE}
+      message: >
+        *Repo:* `{{repo.name}}`
+
+
+        {{#success build.status}}*✅ SUCCESS* for{{else}}*❌ FAILED*{{/success}} build {{build.number}}
+
+        Built on `{{tpl.machine}}` in {{since build.started}}
+
+
+        📝 Commit by `{{commit.author}}` on `{{commit.branch}}`:
+
+        ```
+        {{commit.message}}
+        ```
+
+
+        [🌐 Link to build]({{ build.link }})
+        \
+        [🕸️Link to commit]({{ commit.link }})
+
+    when:
+      status:
+        - success
+        - failure
+volumes:
+  - name: docker
+    host:
+      path: /var/run/docker.sock
+
+trigger:
+  branch:
+    - main
+    - master
+  event:
+    - push

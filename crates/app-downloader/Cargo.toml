@@ -1,0 +1,37 @@
+[package]
+name = "app-downloader"
+version.workspace = true
+authors.workspace = true
+description.workspace = true
+edition.workspace = true
+
+[dependencies]
+app-fixers.workspace = true
+app-logger.workspace = true
+rayon = "1.7.0"
+regex = "1.8.4"
+serde = { version = "1.0.164", features = ["derive", "alloc"] }
+serde_json = { version = "1.0.96", features = ["alloc", "preserve_order"] }
+reqwest = { version = "0.11.14", default-features = false, features = [
+  "blocking",
+  "json",
+  "deflate",
+  "gzip",
+  "brotli",
+  "rustls-tls",
+  "trust-dns",
+] }
+url = "2.4.0"
+app-config.workspace = true
+app-helpers.workspace = true
+unicode-segmentation = "1.10.1"
+tl = "0.7.8"
+mime2ext = "0.1.52"
+thiserror.workspace = true
+async-trait = "0.1.77"
+once_cell.workspace = true
+http-serde = "2.0.0"
+http = "1.0.0"
+
+[lints]
+workspace = true

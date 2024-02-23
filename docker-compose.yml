@@ -1,0 +1,10 @@
+version: '3'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: .docker/app/Dockerfile
+      args:
+        - user_id=${user_id:-1000}
+        - group_id=${group_id:-1000}

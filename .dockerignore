@@ -1,0 +1,31 @@
+# git
+.gitignore
+.git
+
+# docker
+.dockerignore
+.docker/
+!.docker/app/update-packages.sh
+!.docker/app/update_yt-dlp.sh
+docker-compose.yml
+docker-compose.*.yml
+
+# misc
+.DS_Store
+LICENSE
+README.md
+config/
+test-media/
+.github/
+.drone.yml
+.env
+mprocs.yaml
+
+# artefacts
+target/
+.out/
+
+# editors
+.vscode/
+.idea/
+.fleet/

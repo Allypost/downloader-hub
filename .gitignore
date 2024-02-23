@@ -1,0 +1,11 @@
+/target
+/.out
+.idea
+/config/
+docker-compose.*.yml
+docker-compose.*.yaml
+
+/test-media/
+
+.env
+.env.*

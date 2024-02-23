@@ -1,0 +1,8 @@
+{
+    "recommendations": [
+        "bruno-api-client.bruno",
+        "rust-lang.rust-analyzer",
+        "skellock.just",
+        "tamasfe.even-better-toml"
+    ]
+}
