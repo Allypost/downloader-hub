@@ -59,8 +59,8 @@ RUN cargo chef cook \
 # Copy rest of files and compile
 # only the remaining app code
 COPY . .
+ARG RUST_TARGET
 ARG BINARY_NAME
-ARG APP_FEATURES
 RUN cargo build \
   --release \
   --target="${RUST_TARGET}" \
