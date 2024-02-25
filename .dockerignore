@@ -19,7 +19,11 @@ test-media/
 .github/
 .drone.yml
 .env
+.env.*
 mprocs.yaml
+.bruno
+justfile
+.editorconfig
 
 # artefacts
 target/

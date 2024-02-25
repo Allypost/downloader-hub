@@ -44,6 +44,8 @@ steps:
     failure: ignore
     image: appleboy/drone-telegram
     pull: always
+    environment:
+        PLUGIN_DISABLE_WEB_PAGE_PREVIEW: "true"
     settings:
       token:
         from_secret: TELEGRAM_DEPLOY_BOT_TOKEN
