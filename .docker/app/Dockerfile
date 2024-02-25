@@ -108,8 +108,8 @@ RUN userdel --remove ubuntu; groupdel ubuntu; echo "Deleted default ubuntu user"
 ARG RUN_USERNAME
 ARG RUN_USER_ID
 ARG RUN_GROUP_ID
-RUN groupadd --gid "${APP_GROUP_ID}" "${APP_USERNAME}"
-RUN useradd --create-home --uid "${APP_USER_ID}" --gid "${APP_GROUP_ID}" "${APP_USERNAME}"
+RUN groupadd --gid "${RUN_GROUP_ID}" "${RUN_USERNAME}"
+RUN useradd --create-home --uid "${RUN_USER_ID}" --gid "${RUN_GROUP_ID}" "${RUN_USERNAME}"
 # Install app
 ARG RUST_TARGET
 ARG BINARY_NAME
