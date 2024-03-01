@@ -56,7 +56,7 @@ async fn handle_task(task: &Task) {
     let err = match res {
         Ok(()) => {
             if let Ok(took) = task.time_since_added().to_std() {
-                app_logger::info!(?task, "Task completed after {:?}", took);
+                app_logger::info!("Task completed after {:?}", took);
             }
             return;
         }
@@ -64,10 +64,10 @@ async fn handle_task(task: &Task) {
         Err(e) => e,
     };
 
-    app_logger::warn!(?err, ?task, "Got error processing task");
+    app_logger::warn!(?err, "Got error processing task");
 
     if let Err(e) = should_retry(task, err) {
-        app_logger::error!(?e, ?task, "Task will not be retried");
+        app_logger::error!(?e, "Task will not be retried");
         return;
     }
 
