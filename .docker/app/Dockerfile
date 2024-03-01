@@ -118,5 +118,5 @@ RUN chmod a=rx "/usr/local/bin/${BINARY_NAME}"
 # Run app
 USER ${RUN_USERNAME}
 LABEL org.opencontainers.image.authors="me@allypost.net"
-ENTRYPOINT ["${BINARY_NAME}"]
+ENTRYPOINT "${BINARY_NAME}"
 CMD [ "--help" ]
