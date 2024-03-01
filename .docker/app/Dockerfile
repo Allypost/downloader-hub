@@ -116,7 +116,8 @@ ARG BINARY_NAME
 COPY --from=builder "/app/target/${RUST_TARGET}/release/${BINARY_NAME}" /usr/local/bin/
 RUN chmod a=rx "/usr/local/bin/${BINARY_NAME}"
 # Run app
+RUN echo "#!/bin/bash\n\n/usr/local/bin/${BINARY_NAME} \$@" > /entrypoint.sh && chmod +x /entrypoint.sh
 USER ${RUN_USERNAME}
 LABEL org.opencontainers.image.authors="me@allypost.net"
-ENTRYPOINT "${BINARY_NAME}"
+ENTRYPOINT [ "/entrypoint.sh" ]
 CMD [ "--help" ]
