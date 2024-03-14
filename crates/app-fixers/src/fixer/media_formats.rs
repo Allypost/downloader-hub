@@ -7,7 +7,7 @@ use std::{
 };
 
 use anyhow::anyhow;
-use app_config::CONFIG;
+use app_config::Config;
 use app_helpers::{
     ffprobe::{self, FfProbeResult, Stream},
     id::time_thread_id,
@@ -152,7 +152,7 @@ fn transcode_media_into(from_path: &PathBuf, to_format: &TranscodeInfo) -> anyho
         to = cache_to_path.file_name(),
     );
 
-    let ffmpeg_path = CONFIG.dependency_paths.ffmpeg_path();
+    let ffmpeg_path = Config::global().dependency_paths.ffmpeg_path().clone();
     trace!("`ffmpeg' binary: {ffmpeg_path:?}");
     let mut cmd = process::Command::new(ffmpeg_path);
     let mut cmd = cmd
@@ -232,7 +232,9 @@ fn transcode_media_into(from_path: &PathBuf, to_format: &TranscodeInfo) -> anyho
 fn copy_file_to_cache_folder(file_path: &Path) -> anyhow::Result<(PathBuf, PathBuf)> {
     let id = time_thread_id();
 
-    let cache_folder = CONFIG.get_cache_dir().join(format!("transcode-{}", id));
+    let cache_folder = Config::global()
+        .get_cache_dir()
+        .join(format!("transcode-{}", id));
 
     if !cache_folder.exists() {
         trace!("Creating {path:?}", path = cache_folder);

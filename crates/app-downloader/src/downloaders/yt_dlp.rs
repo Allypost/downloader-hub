@@ -1,6 +1,6 @@
 use std::{ops::Sub, path::PathBuf, process};
 
-use app_config::CONFIG;
+use app_config::Config;
 use app_helpers::id::time_id;
 use app_logger::{debug, trace};
 
@@ -41,7 +41,7 @@ impl YtDlpDownloader {
         request_info: &DownloadFileRequest,
         url: &str,
     ) -> Result<DownloadResult, String> {
-        let yt_dlp = CONFIG.dependency_paths.yt_dlp_path();
+        let yt_dlp = Config::global().dependency_paths.yt_dlp_path();
         trace!("`yt-dlp' binary: {:?}", &yt_dlp);
         let output_template = get_output_template(&request_info.download_dir);
         debug!("template: {:?}", &output_template);

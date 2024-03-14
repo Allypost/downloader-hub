@@ -1,5 +1,6 @@
-mod cli;
-pub(crate) mod common;
+pub mod cli;
+pub mod common;
+pub mod conditional;
 
 use std::{env, path::PathBuf};
 
@@ -11,7 +12,7 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-pub static CONFIG: Lazy<Config> = Lazy::new(Config::new);
+static CONFIG: Lazy<Config> = Lazy::new(Config::new);
 
 pub static APPLICATION_NAME: &str = "downloader-hub";
 pub static ORGANIZATION_NAME: &str = "allypost";
@@ -27,21 +28,14 @@ pub struct Config {
     #[validate]
     pub dependency_paths: common::ProgramPathConfig,
 
-    /// Server configuration
-    #[validate]
-    pub server: common::ServerConfig,
-
     /// Specifying external endpoints that the application will use
     #[validate]
     pub endpoint: common::EndpointConfig,
 
-    /// Database configuration
+    #[cfg(feature = "server")]
+    /// Config for the server
     #[validate]
-    pub database: common::DatabaseConfig,
-
-    /// Application config
-    #[validate]
-    pub app: common::AppConfig,
+    pub server: conditional::server::ServerConfig,
 }
 impl Config {
     #[must_use]
@@ -72,23 +66,57 @@ impl Config {
         Self::cache_dir()
     }
 
+    pub fn dump_config_if_needed<T>(data: &T, dump_type: &Option<Option<DumpConfigType>>)
+    where
+        T: Serialize + ?Sized,
+    {
+        match dump_type {
+            Some(dump_type) => {
+                let out = match dump_type {
+                    None | Some(DumpConfigType::Json) => serde_json::to_string_pretty(data)
+                        .expect("Failed to serialize config to JSON"),
+
+                    Some(DumpConfigType::Toml) => {
+                        toml::to_string_pretty(data).expect("Failed to serialize config to TOML")
+                    }
+                };
+
+                println!("{}", out.trim());
+                std::process::exit(0);
+            }
+            None => (),
+        }
+    }
+
+    pub fn validate_config_and_exit<T: Validate>(conf: T) -> T {
+        if let Err(e) = conf.validate() {
+            eprintln!("Errors validating configuration:");
+            print_validation_errors(&e, "  ", 1);
+            std::process::exit(1);
+        }
+
+        conf
+    }
+
     fn new() -> Self {
         let args = CliArgs::parse();
 
         Self::default()
             .merge_with_cli(args)
             .resolve_paths()
-            .dump_if_needed()
             .validate_self()
+            .dump_if_needed()
     }
 
     fn merge_with_cli(mut self, args: CliArgs) -> Self {
         self.run = args.run;
         self.dependency_paths = args.dependency_path;
-        self.server = args.server;
         self.endpoint = args.endpoint;
-        self.database = args.database;
-        self.app = args.app;
+
+        #[cfg(feature = "server")]
+        {
+            self.server = args.server;
+        }
 
         self
     }
@@ -100,68 +128,47 @@ impl Config {
     }
 
     fn dump_if_needed(self) -> Self {
-        match &self.run.dump_config {
-            Some(dump_config_type) => {
-                let out = match dump_config_type {
-                    None | Some(DumpConfigType::Json) => serde_json::to_string_pretty(&self)
-                        .expect("Failed to serialize config to JSON"),
-
-                    Some(DumpConfigType::Toml) => {
-                        toml::to_string_pretty(&self).expect("Failed to serialize config to TOML")
-                    }
-                };
-
-                println!("{}", out.trim());
-
-                std::process::exit(0);
-            }
-            None => self,
-        }
+        Self::dump_config_if_needed(&self, &self.run.dump_config);
+        self
     }
 
     fn validate_self(self) -> Self {
-        fn print_errors(e: &validator::ValidationErrors, prefix: &str, level: usize) {
-            let level = level.max(1);
-            for (e_name, e) in e.errors() {
-                match e {
-                    validator::ValidationErrorsKind::Field(e) => {
-                        let prefix_rep = prefix.repeat(level);
-                        eprintln!(
-                            "{prefix_rep}{e_name}:\n{}",
-                            e.iter()
-                                .map(|x| format!("{} {:?}", x.code, x.params))
-                                .fold(String::new(), |acc, a| format!(
-                                    "{acc}{prefix_rep}{prefix}- {a}\n"
-                                ))
-                                .trim_end()
-                        );
-                    }
-
-                    validator::ValidationErrorsKind::Struct(e) => {
-                        eprintln!("{}{}:", prefix, e_name);
-                        print_errors(e, prefix, level + 1);
-                    }
-
-                    validator::ValidationErrorsKind::List(e) => {
-                        eprintln!("{}{}:", prefix, e_name);
-                        for e in e.values() {
-                            print_errors(e, prefix, level + 1);
-                        }
-                    }
-                }
-            }
-        }
-
-        if let Err(e) = self.validate() {
-            eprintln!("Errors validating configuration:");
-            print_errors(&e, "  ", 1);
-            std::process::exit(1);
-        }
-
-        self
+        Self::validate_config_and_exit(self)
     }
 
     fn get_project_dir() -> Option<ProjectDirs> {
         ProjectDirs::from(ORGANIZATION_QUALIFIER, ORGANIZATION_NAME, APPLICATION_NAME)
+    }
+}
+
+pub fn print_validation_errors(e: &validator::ValidationErrors, prefix: &str, level: usize) {
+    let level = level.max(1);
+    for (e_name, e) in e.errors() {
+        match e {
+            validator::ValidationErrorsKind::Field(e) => {
+                let prefix_rep = prefix.repeat(level);
+                eprintln!(
+                    "{prefix_rep}{e_name}:\n{}",
+                    e.iter()
+                        .map(|x| format!("{} {:?}", x.code, x.params))
+                        .fold(String::new(), |acc, a| format!(
+                            "{acc}{prefix_rep}{prefix}- {a}\n"
+                        ))
+                        .trim_end()
+                );
+            }
+
+            validator::ValidationErrorsKind::Struct(e) => {
+                eprintln!("{}{}:", prefix, e_name);
+                print_validation_errors(e, prefix, level + 1);
+            }
+
+            validator::ValidationErrorsKind::List(e) => {
+                eprintln!("{}{}:", prefix, e_name);
+                for e in e.values() {
+                    print_validation_errors(e, prefix, level + 1);
+                }
+            }
+        }
     }
 }

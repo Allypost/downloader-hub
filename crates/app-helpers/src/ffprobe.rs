@@ -1,11 +1,11 @@
 use std::{collections::HashMap, io, num, path::Path, process, time};
 
-use app_config::CONFIG;
+use app_config::Config;
 use serde::{Deserialize, Serialize};
 
 pub fn ffprobe(path: impl AsRef<Path>) -> Result<FfProbeResult, FfProbeError> {
     ffprobe_config(
-        Config {
+        FfprobeConfig {
             count_frames: false,
         },
         path,
@@ -13,12 +13,12 @@ pub fn ffprobe(path: impl AsRef<Path>) -> Result<FfProbeResult, FfProbeError> {
 }
 
 pub fn ffprobe_config(
-    config: Config,
+    config: FfprobeConfig,
     path: impl AsRef<Path>,
 ) -> Result<FfProbeResult, FfProbeError> {
     let path = path.as_ref();
 
-    let ffprobe_path = CONFIG.dependency_paths.ffprobe_path();
+    let ffprobe_path = Config::global().dependency_paths.ffprobe_path();
     let mut cmd = process::Command::new(ffprobe_path);
     {
         cmd.args(["-v", "quiet"])
@@ -46,11 +46,11 @@ pub fn ffprobe_config(
 ///
 /// Use [`Config::builder`] for constructing a new config.
 #[derive(Clone, Copy, Debug)]
-pub struct Config {
+pub struct FfprobeConfig {
     count_frames: bool,
 }
 
-impl Config {
+impl FfprobeConfig {
     /// Construct a new `ConfigBuilder`.
     #[must_use]
     pub const fn builder() -> ConfigBuilder {
@@ -60,14 +60,14 @@ impl Config {
 
 /// Build the ffprobe configuration.
 pub struct ConfigBuilder {
-    config: Config,
+    config: FfprobeConfig,
 }
 
 impl ConfigBuilder {
     #[must_use]
     pub const fn new() -> Self {
         Self {
-            config: Config {
+            config: FfprobeConfig {
                 count_frames: false,
             },
         }
@@ -84,7 +84,7 @@ impl ConfigBuilder {
 
     /// Finalize the builder into a [`Config`].
     #[must_use]
-    pub const fn build(self) -> Config {
+    pub const fn build(self) -> FfprobeConfig {
         self.config
     }
 

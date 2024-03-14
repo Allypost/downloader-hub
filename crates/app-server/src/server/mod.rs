@@ -1,6 +1,6 @@
 use std::{net::SocketAddr, time::Duration};
 
-use app_config::CONFIG;
+use app_config::Config;
 use axum::{
     http::{header, HeaderValue, Request},
     middleware,
@@ -43,8 +43,8 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let listener = match listenfd.take_tcp_listener(0)? {
         Some(listener) => TcpListener::from_std(listener).expect("Failed to create listener"),
         None => {
-            let host = CONFIG.server.host.clone();
-            let port = CONFIG.server.port;
+            let host = Config::global().server.run.host.clone();
+            let port = Config::global().server.run.port;
 
             TcpListener::bind((host, port))
                 .await

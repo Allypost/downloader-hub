@@ -21,12 +21,7 @@ pub struct CliArgs {
     #[command(flatten)]
     pub run: common::RunConfig,
 
+    #[cfg(feature = "server")]
     #[command(flatten)]
-    pub server: common::ServerConfig,
-
-    #[command(flatten)]
-    pub database: common::DatabaseConfig,
-
-    #[command(flatten)]
-    pub app: common::AppConfig,
+    pub server: crate::conditional::server::ServerConfig,
 }

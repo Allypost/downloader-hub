@@ -2,6 +2,8 @@ ARG RUST_VERSION='1.76'
 ARG RUST_TARGET='x86_64-unknown-linux-musl'
 ARG BINARY_NAME='downloader-hub'
 
+ARG APP_FEATURES='server'
+
 ARG RUN_USERNAME='app'
 ARG RUN_USER_ID='1000'
 ARG RUN_GROUP_ID='1000'
@@ -52,18 +54,22 @@ FROM chef AS builder
 COPY --from=planner /app/recipe.json .
 # Build dependencies
 ARG RUST_TARGET
+ARG APP_FEATURES
 RUN cargo chef cook \
   --release \
   --target "${RUST_TARGET}" \
+  --features "$APP_FEATURES" \
   --recipe-path recipe.json
 # Copy rest of files and compile
 # only the remaining app code
 COPY . .
 ARG RUST_TARGET
+ARG APP_FEATURES
 ARG BINARY_NAME
 RUN cargo build \
   --release \
   --target="${RUST_TARGET}" \
+  --features "$APP_FEATURES" \
   --bin "${BINARY_NAME}"
 
 

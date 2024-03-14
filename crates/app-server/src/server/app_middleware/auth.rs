@@ -1,6 +1,6 @@
 use std::string::ToString;
 
-use app_config::CONFIG;
+use app_config::Config;
 use app_entities::{client, entity_meta::common::path::AppPath};
 use axum::{extract::Request, http};
 use sea_orm::prelude::*;
@@ -92,17 +92,19 @@ impl AuthorizationSchema {
                 Some(res)
             }
 
-            Self::AdminKey(ref key) if CONFIG.server.admin_key == *key => Some(CurrentUser {
-                id: ADMIN_ID,
-                name: "admin".to_string(),
-                api_key: key.to_string(),
-                app_meta: serde_json::json!({
-                    "admin": true,
-                }),
-                download_folder: AppPath::None.into(),
-                created_at: chrono::Utc::now().fixed_offset(),
-                updated_at: chrono::Utc::now().fixed_offset(),
-            }),
+            Self::AdminKey(ref key) if Config::global().server.run.admin_key == *key => {
+                Some(CurrentUser {
+                    id: ADMIN_ID,
+                    name: "admin".to_string(),
+                    api_key: key.to_string(),
+                    app_meta: serde_json::json!({
+                        "admin": true,
+                    }),
+                    download_folder: AppPath::None.into(),
+                    created_at: chrono::Utc::now().fixed_offset(),
+                    updated_at: chrono::Utc::now().fixed_offset(),
+                })
+            }
             Self::AdminKey(_) => None,
         }
     }

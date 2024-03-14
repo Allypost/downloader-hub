@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use app_config::CONFIG;
+use app_config::Config;
 use app_logger::{debug, trace};
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -38,7 +38,7 @@ impl Downloader for TwitterDownloader {
         YtDlpDownloader.get_resolved(req).or_else(|_| {
             debug!(?req, "Failed to download with yt-dlp. Trying to screenshot",);
 
-            let endpoint = &CONFIG.endpoint.twitter_screenshot_base_url;
+            let endpoint = &Config::global().endpoint.twitter_screenshot_base_url;
             let tweet_screenshot_url =
                 format!("{}/{}", endpoint.trim_end_matches('/'), req.original_url);
 
@@ -90,7 +90,7 @@ impl TwitterDownloader {
     ) -> Result<DownloadResult, DownloaderError> {
         debug!(?url, "Trying to screenshot tweet");
 
-        let endpoint = &CONFIG.endpoint.twitter_screenshot_base_url;
+        let endpoint = &Config::global().endpoint.twitter_screenshot_base_url;
         let tweet_screenshot_url = format!("{}/{}", endpoint.trim_end_matches('/'), url);
 
         trace!(url = ?tweet_screenshot_url, "Tweet screenshot URL");

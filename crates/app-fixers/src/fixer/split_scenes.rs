@@ -3,7 +3,7 @@ use std::{
     process::Command,
 };
 
-use app_config::CONFIG;
+use app_config::Config;
 use app_helpers::dirs::create_temp_dir;
 
 pub fn split_video_into_scenes(file_path: &Path) -> Result<Vec<PathBuf>, String> {
@@ -37,7 +37,7 @@ impl<'a> SplitVideoConfig<'a> {
 }
 
 pub fn split_into_scenes(config: &SplitVideoConfig) -> Result<Vec<PathBuf>, String> {
-    let Some(scenedetect_path) = &CONFIG.dependency_paths.scenedetect_path() else {
+    let Some(scenedetect_path) = &Config::global().dependency_paths.scenedetect_path() else {
         return Err("scenedetect not found".into());
     };
 

@@ -1,4 +1,4 @@
-use app_config::CONFIG;
+use app_config::Config;
 use app_helpers::encoding::{from_base64_padded, to_base64_padded};
 use chrono::{DateTime, Duration, Utc};
 use hmac::{Hmac, Mac};
@@ -44,8 +44,9 @@ impl Signature {
     where
         T: AsRef<[u8]>,
     {
-        let mut mac = SignatureHmac::new_from_slice(CONFIG.server.signing_key.as_bytes())
-            .expect("Failed to create Hmac instance");
+        let mut mac =
+            SignatureHmac::new_from_slice(Config::global().server.run.signing_key.as_bytes())
+                .expect("Failed to create Hmac instance");
         mac.update(for_data.as_ref());
         mac.update(&signature_enc::timestamp_to_int(&issued).to_le_bytes());
         mac.update(&signature_enc::timestamp_to_int(&expires).to_le_bytes());
@@ -78,7 +79,12 @@ impl Signature {
         static BASE: OnceCell<Url> = OnceCell::new();
         let base_url = BASE
             .get_or_try_init(|| {
-                let mut base_url = CONFIG.app.public_url.trim_end_matches('/').to_string();
+                let mut base_url = Config::global()
+                    .server
+                    .app
+                    .public_url
+                    .trim_end_matches('/')
+                    .to_string();
                 base_url.push('/');
 
                 Url::parse(&base_url)

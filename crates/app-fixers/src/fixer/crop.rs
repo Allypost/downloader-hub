@@ -1,6 +1,6 @@
 use std::{ffi::OsStr, fmt::Display, path::PathBuf, process};
 
-use app_config::CONFIG;
+use app_config::Config;
 use app_helpers::{ffprobe, results::option_contains, trash::move_to_trash};
 use app_logger::{debug, trace};
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
@@ -88,7 +88,7 @@ pub fn do_auto_crop_video(file_path: &PathBuf) -> Result<PathBuf, CropError> {
         file_path.with_file_name(format!("{file_name}.ac.{file_extension}"))
     };
 
-    let mut cmd = Cmd::new(CONFIG.dependency_paths.ffmpeg_path());
+    let mut cmd = Cmd::new(Config::global().dependency_paths.ffmpeg_path());
     cmd.arg("-y")
         .args(["-loglevel", "panic"])
         .args(["-i", file_path_str])
@@ -212,7 +212,7 @@ fn get_crop_filter(
         filters.join(",")
     };
 
-    let mut cmd = process::Command::new(CONFIG.dependency_paths.ffmpeg_path());
+    let mut cmd = process::Command::new(Config::global().dependency_paths.ffmpeg_path());
     let cmd = cmd
         .arg("-hide_banner")
         .args(["-i", file_path])

@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use app_config::CONFIG;
+use app_config::Config;
 use app_migration::MigratorTrait;
 use once_cell::sync::OnceCell;
 use sea_orm::{Database, DatabaseConnection};
@@ -20,7 +20,7 @@ impl AppDb {
 
         app_logger::debug!("Initializing database");
 
-        let mut opt = sea_orm::ConnectOptions::new(&CONFIG.database.url);
+        let mut opt = sea_orm::ConnectOptions::new(&Config::global().server.database.url);
         opt.max_connections(50)
             .connect_timeout(Duration::from_secs(5))
             .acquire_timeout(Duration::from_secs(5))
