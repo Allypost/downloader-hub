@@ -186,7 +186,7 @@ fn transcode_media_into(from_path: &PathBuf, to_format: &TranscodeInfo) -> anyho
                 to = to_extension
             );
 
-            let transfer_file_times = transferable_file_times(from_path.into());
+            let transfer_file_times = transferable_file_times(from_path);
 
             let new_file_path = from_path.with_extension(to_extension);
 
