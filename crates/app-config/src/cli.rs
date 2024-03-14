@@ -24,4 +24,8 @@ pub struct CliArgs {
     #[cfg(feature = "server")]
     #[command(flatten)]
     pub server: crate::conditional::server::ServerConfig,
+
+    #[cfg(feature = "cli")]
+    #[command(flatten)]
+    pub cli: crate::conditional::cli::CliConfig,
 }

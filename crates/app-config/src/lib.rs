@@ -36,6 +36,11 @@ pub struct Config {
     /// Config for the server
     #[validate]
     pub server: conditional::server::ServerConfig,
+
+    #[cfg(feature = "cli")]
+    /// Config for the CLI
+    #[validate]
+    pub cli: conditional::cli::CliConfig,
 }
 impl Config {
     #[must_use]
@@ -116,6 +121,11 @@ impl Config {
         #[cfg(feature = "server")]
         {
             self.server = args.server;
+        }
+
+        #[cfg(feature = "cli")]
+        {
+            self.cli = args.cli;
         }
 
         self

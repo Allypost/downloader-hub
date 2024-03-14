@@ -147,6 +147,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "080e9890a082662b09c1ad45f567faeeb47f22b5fb23895fbe1e651e718e25ca"
 
 [[package]]
+name = "app-cli"
+version = "0.4.0"
+dependencies = [
+ "app-config",
+ "app-downloader",
+ "app-fixers",
+ "app-logger",
+ "futures",
+ "rayon",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+]
+
+[[package]]
 name = "app-config"
 version = "0.4.0"
 dependencies = [
@@ -1208,6 +1224,7 @@ checksum = "1aaf95b3e5c8f23aa320147307562d361db0ae0d51242340f558153b4eb2439b"
 name = "downloader-hub"
 version = "0.4.0"
 dependencies = [
+ "app-cli",
  "app-server",
  "serde",
  "tokio",

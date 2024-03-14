@@ -1,0 +1,29 @@
+[package]
+name = "app-cli"
+version.workspace = true
+authors.workspace = true
+description.workspace = true
+edition.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+app-config = { workspace = true, features = ["cli"] }
+app-downloader.workspace = true
+app-fixers.workspace = true
+app-logger.workspace = true
+futures = "0.3.30"
+rayon = "1.9.0"
+tokio = "1.36.0"
+tracing.workspace = true
+tracing-subscriber = { version = "0.3.18", features = [
+    "env-filter",
+    "json",
+    "local-time",
+    "time",
+    "parking_lot",
+] }
+url = "2.5.0"
+
+[lints]
+workspace = true

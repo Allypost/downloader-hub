@@ -20,6 +20,10 @@ pub fn fix_file(path: &Path) -> Result<PathBuf, FixerError> {
     sync::fix_file_with(DEFAULT_FIXERS, path)
 }
 
+pub async fn fix_file_async(path: &Path) -> Result<PathBuf, FixerError> {
+    as_future::fix_file_with(DEFAULT_FIXERS, path).await
+}
+
 pub mod as_future {
     use std::path::{Path, PathBuf};
 
