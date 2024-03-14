@@ -25,7 +25,9 @@ pub mod as_future {
 
     use resolve_path::PathResolveExt;
 
-    use crate::{error::FixerError, Fixer, IntoFixerReturn, DEFAULT_FIXERS};
+    use crate::{
+        error::FixerError, util::transferable_file_times, Fixer, IntoFixerReturn, DEFAULT_FIXERS,
+    };
 
     pub async fn fix_files_with(
         fixers: &[Fixer],
@@ -52,9 +54,11 @@ pub mod as_future {
             .canonicalize()
             .map_err(|e| FixerError::FailedToCanonicalizePath(path.to_path_buf(), e))?;
 
+        let transfer_file_times = transferable_file_times(&p);
+
         let fixers = fixers.to_vec();
 
-        tokio::task::spawn_blocking(move || {
+        let res = tokio::task::spawn_blocking(move || {
             let mut p = p.clone();
             for filter in fixers {
                 p = filter(&p).into_fixer_return()?;
@@ -63,7 +67,21 @@ pub mod as_future {
             Ok(p)
         })
         .await
-        .map_err(FixerError::JoinError)?
+        .map_err(FixerError::JoinError)?;
+
+        if let Ok(new_path) = res.as_ref() {
+            if new_path.as_os_str() != path.as_os_str() {
+                if let Ok(transfer_file_times) = transfer_file_times {
+                    if let Err(e) = transfer_file_times(new_path) {
+                        app_logger::warn!(
+                            "Failed to transfer file times of {path:?} to {new_path:?}: {e:?}"
+                        );
+                    }
+                }
+            }
+        }
+
+        res
     }
 }
 
