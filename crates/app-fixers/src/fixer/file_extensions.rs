@@ -1,11 +1,15 @@
-use std::{ffi::OsStr, fs, path::PathBuf};
+use std::{
+    ffi::OsStr,
+    fs,
+    path::{Path, PathBuf},
+};
 
 use app_logger::{debug, trace};
 use thiserror::Error;
 
 use crate::{FixerReturn, IntoFixerReturn};
 
-pub fn fix_file_extension(file_path: &PathBuf) -> FixerReturn {
+pub fn fix_file_extension(file_path: &Path) -> FixerReturn {
     debug!("Checking file extension for {file_path:?}...");
 
     let extension = file_path.extension().and_then(OsStr::to_str);
@@ -13,7 +17,8 @@ pub fn fix_file_extension(file_path: &PathBuf) -> FixerReturn {
     let file_ext = match infer::get_from_path(file_path) {
         Ok(Some(ext)) => ext.extension(),
         _ => {
-            return FileExtensionError::UnableToGetExtension(file_path.clone()).into_fixer_return();
+            return FileExtensionError::UnableToGetExtension(file_path.to_path_buf())
+                .into_fixer_return();
         }
     };
     debug!("Inferred file extension: {:?}", file_ext);
@@ -21,7 +26,7 @@ pub fn fix_file_extension(file_path: &PathBuf) -> FixerReturn {
     if let Some(extension) = extension {
         if extension == file_ext {
             debug!("File extension is correct");
-            return Ok(file_path.clone());
+            return Ok(file_path.to_path_buf());
         }
     }
 

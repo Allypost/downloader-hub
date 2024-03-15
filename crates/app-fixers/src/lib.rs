@@ -16,11 +16,11 @@ pub static DEFAULT_FIXERS: &[Fixer] = &[
     fixer::crop::auto_crop_video,
 ];
 
-pub fn fix_file(path: &Path) -> Result<PathBuf, FixerError> {
+pub fn fix_file(path: &Path) -> FixerReturn {
     sync::fix_file_with(DEFAULT_FIXERS, path)
 }
 
-pub async fn fix_file_async(path: &Path) -> Result<PathBuf, FixerError> {
+pub async fn fix_file_async(path: &Path) -> FixerReturn {
     as_future::fix_file_with(DEFAULT_FIXERS, path).await
 }
 
@@ -113,7 +113,7 @@ pub mod sync {
     }
 }
 
-type Fixer = fn(&PathBuf) -> FixerReturn;
+type Fixer = fn(&Path) -> FixerReturn;
 
 type FixerReturn = Result<PathBuf, FixerError>;
 trait IntoFixerReturn {

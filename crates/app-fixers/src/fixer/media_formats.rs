@@ -20,7 +20,7 @@ use thiserror::Error;
 
 use crate::{error::FixerError, util::transferable_file_times, FixerReturn, IntoFixerReturn};
 
-pub fn convert_into_preferred_formats(file_path: &PathBuf) -> FixerReturn {
+pub fn convert_into_preferred_formats(file_path: &Path) -> FixerReturn {
     debug!("Checking if {file_path:?} has unwanted formats");
 
     Ok(file_path)
@@ -32,9 +32,9 @@ pub fn convert_into_preferred_formats(file_path: &PathBuf) -> FixerReturn {
         .map_err(FixerError::failed_fix)
 }
 
-fn check_and_fix_file(file_path: &PathBuf) -> Result<PathBuf, MediaFormatsError> {
+fn check_and_fix_file(file_path: &Path) -> Result<PathBuf, MediaFormatsError> {
     if !file_path.exists() {
-        return Err(MediaFormatsError::NotFound(file_path.clone()));
+        return Err(MediaFormatsError::NotFound(file_path.to_path_buf()));
     }
 
     let file_format_info = ffprobe::ffprobe(file_path)?;
@@ -52,12 +52,12 @@ fn check_and_fix_file(file_path: &PathBuf) -> Result<PathBuf, MediaFormatsError>
                 .as_deref()
                 .is_some_and(|codec| matches!(codec, "video" | "image"))
         })
-        .ok_or_else(|| MediaFormatsError::NoImageStream(file_path.clone()))?;
+        .ok_or_else(|| MediaFormatsError::NoImageStream(file_path.to_path_buf()))?;
 
     let file_stream_codec = file_image_stream
         .codec_name
         .as_deref()
-        .ok_or_else(|| MediaFormatsError::CodecName(file_path.clone()))?;
+        .ok_or_else(|| MediaFormatsError::CodecName(file_path.to_path_buf()))?;
 
     trace!(
         "File stream codec: {file_stream_codec:?}",
@@ -118,7 +118,7 @@ impl TranscodeInfo {
     }
 }
 
-fn transcode_media_into(from_path: &PathBuf, to_format: &TranscodeInfo) -> anyhow::Result<PathBuf> {
+fn transcode_media_into(from_path: &Path, to_format: &TranscodeInfo) -> anyhow::Result<PathBuf> {
     let to_extension = to_format.extension;
 
     let (cache_folder, cache_from_path) = copy_file_to_cache_folder(from_path)?;
@@ -152,7 +152,7 @@ fn transcode_media_into(from_path: &PathBuf, to_format: &TranscodeInfo) -> anyho
         to = cache_to_path.file_name(),
     );
 
-    let ffmpeg_path = Config::global().dependency_paths.ffmpeg_path().clone();
+    let ffmpeg_path = Config::global().dependency_paths.ffmpeg_path();
     trace!("`ffmpeg' binary: {ffmpeg_path:?}");
     let mut cmd = process::Command::new(ffmpeg_path);
     let mut cmd = cmd
@@ -203,7 +203,7 @@ fn transcode_media_into(from_path: &PathBuf, to_format: &TranscodeInfo) -> anyho
                 ));
             }
 
-            if &new_file_path != from_path {
+            if new_file_path != from_path {
                 trace!("Deleting old file {path:?}", path = from_path);
                 if let Err(e) = move_to_trash(from_path) {
                     debug!("Failed to delete {path:?}: {e:?}", path = from_path);

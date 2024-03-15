@@ -42,7 +42,7 @@ pub struct ProgramPathConfig {
 }
 impl ProgramPathConfig {
     #[must_use]
-    pub fn yt_dlp_path(&self) -> &PathBuf {
+    pub fn yt_dlp_path(&self) -> &Path {
         self.yt_dlp_path.as_ref().expect(
             "`yt-dlp` executable not found. Please make sure it is installed and added to the \
              PATH environment variable.",
@@ -50,7 +50,7 @@ impl ProgramPathConfig {
     }
 
     #[must_use]
-    pub fn ffmpeg_path(&self) -> &PathBuf {
+    pub fn ffmpeg_path(&self) -> &Path {
         self.ffmpeg_path.as_ref().expect(
             "`ffmpeg` executable not found. Please make sure it is installed and added to the \
              PATH environment variable.",
@@ -58,7 +58,7 @@ impl ProgramPathConfig {
     }
 
     #[must_use]
-    pub fn ffprobe_path(&self) -> &PathBuf {
+    pub fn ffprobe_path(&self) -> &Path {
         self.ffprobe_path.as_ref().expect(
             "`ffprobe` executable not found. Please make sure it is installed and added to the \
              PATH environment variable.",

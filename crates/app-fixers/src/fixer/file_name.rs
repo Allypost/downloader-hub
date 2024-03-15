@@ -1,11 +1,14 @@
-use std::{fs, path::PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use app_logger::{debug, trace};
 use thiserror::Error;
 
 use crate::{error::FixerError, FixerReturn, IntoFixerReturn};
 
-pub fn fix_file_name(file_path: &PathBuf) -> FixerReturn {
+pub fn fix_file_name(file_path: &Path) -> FixerReturn {
     debug!("Checking file name for {file_path:?}...");
     let name = file_path.file_stem().and_then(|x| return x.to_str());
 
@@ -15,18 +18,18 @@ pub fn fix_file_name(file_path: &PathBuf) -> FixerReturn {
             name.replace(|c: char| !c.is_ascii(), "")
         }
         None => {
-            return FileNameError::NoName(file_path.clone()).into_fixer_return();
+            return FileNameError::NoName(file_path.to_path_buf()).into_fixer_return();
         }
         Some(name) => {
             debug!("File name for {name:?} is OK. Skipping...");
-            return Ok(file_path.clone());
+            return Ok(file_path.to_path_buf());
         }
     };
 
     let extension = file_path
         .extension()
         .and_then(|x| return x.to_str())
-        .ok_or_else(|| FileNameError::NoExtension(file_path.clone()))
+        .ok_or_else(|| FileNameError::NoExtension(file_path.to_path_buf()))
         .map_err(FixerError::failed_fix)?;
 
     trace!("New file name: {new_name:?} (extension: {extension:?}) for file {file_path:?}");

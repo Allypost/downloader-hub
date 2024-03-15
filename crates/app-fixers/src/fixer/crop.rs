@@ -1,4 +1,9 @@
-use std::{ffi::OsStr, fmt::Display, path::PathBuf, process};
+use std::{
+    ffi::OsStr,
+    fmt::Display,
+    path::{Path, PathBuf},
+    process,
+};
 
 use app_config::Config;
 use app_helpers::{ffprobe, results::option_contains, trash::move_to_trash};
@@ -13,16 +18,16 @@ use crate::{
     FixerReturn, IntoFixerReturn,
 };
 
-pub fn auto_crop_video(file_path: &PathBuf) -> FixerReturn {
+pub fn auto_crop_video(file_path: &Path) -> FixerReturn {
     do_auto_crop_video(file_path).map_err(FixerError::failed_fix)
 }
 
-pub fn do_auto_crop_video(file_path: &PathBuf) -> Result<PathBuf, CropError> {
+pub fn do_auto_crop_video(file_path: &Path) -> Result<PathBuf, CropError> {
     debug!("Auto cropping video {file_path:?}");
 
     let file_path_str = file_path.to_str().ok_or_else(|| {
         CropError::InvalidPath(
-            file_path.clone(),
+            file_path.to_path_buf(),
             "Failed to convert path to string".to_string(),
         )
     })?;
@@ -45,7 +50,7 @@ pub fn do_auto_crop_video(file_path: &PathBuf) -> Result<PathBuf, CropError> {
             trace!("Video width: {w}, height: {h}");
             (w, h)
         } else {
-            return Err(CropError::NoDimensions(file_path.clone()));
+            return Err(CropError::NoDimensions(file_path.to_path_buf()));
         }
     };
 
@@ -65,7 +70,7 @@ pub fn do_auto_crop_video(file_path: &PathBuf) -> Result<PathBuf, CropError> {
     };
 
     let final_crop_filter = CropFilter::intersect_all(crop_filters)
-        .ok_or_else(|| CropError::NoFilters(file_path.clone()))?;
+        .ok_or_else(|| CropError::NoFilters(file_path.to_path_buf()))?;
 
     debug!("Final crop filter: {final_crop_filter:?}");
 
@@ -78,12 +83,14 @@ pub fn do_auto_crop_video(file_path: &PathBuf) -> Result<PathBuf, CropError> {
         let file_name = file_path
             .file_stem()
             .and_then(OsStr::to_str)
-            .ok_or_else(|| CropError::NoFilePart("stem".to_string(), file_path.clone()))?;
+            .ok_or_else(|| CropError::NoFilePart("stem".to_string(), file_path.to_path_buf()))?;
 
         let file_extension = file_path
             .extension()
             .and_then(OsStr::to_str)
-            .ok_or_else(|| CropError::NoFilePart("extension".to_string(), file_path.clone()))?;
+            .ok_or_else(|| {
+                CropError::NoFilePart("extension".to_string(), file_path.to_path_buf())
+            })?;
 
         file_path.with_file_name(format!("{file_name}.ac.{file_extension}"))
     };
