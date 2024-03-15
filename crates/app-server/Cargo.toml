@@ -1,5 +1,5 @@
 [package]
-name = "app-server"
+name = "downloader-hub"
 version.workspace = true
 authors.workspace = true
 description.workspace = true

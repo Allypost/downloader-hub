@@ -2,7 +2,7 @@ ARG RUST_VERSION='1.76'
 ARG RUST_TARGET='x86_64-unknown-linux-musl'
 ARG BINARY_NAME='downloader-hub'
 
-ARG APP_FEATURES='server'
+ARG APP_FEATURES=''
 
 ARG RUN_USERNAME='app'
 ARG RUN_USER_ID='1000'
@@ -59,6 +59,7 @@ RUN cargo chef cook \
   --release \
   --target "${RUST_TARGET}" \
   --features "$APP_FEATURES" \
+  --bin "${BINARY_NAME}" \
   --recipe-path recipe.json
 # Copy rest of files and compile
 # only the remaining app code

@@ -1,10 +1,9 @@
 [workspace]
 members = ["crates/*"]
-default-members = ["crates/app"]
 resolver = "2"
 
 [workspace.package]
-version = "0.4.0"
+version = "0.5.0"
 authors = ["Allypost"]
 description = "A meme downloader"
 edition = "2021"

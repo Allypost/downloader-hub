@@ -10,7 +10,8 @@ mod queue;
 mod server;
 mod service;
 
-pub async fn run() {
+#[tokio::main]
+async fn main() {
     let loaded_dotenv = dotenvy::dotenv();
 
     app_logger::init();

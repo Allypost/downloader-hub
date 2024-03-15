@@ -4,8 +4,8 @@ use app_config::Config;
 use app_downloader::downloaders::DownloadFileRequest;
 use tracing_subscriber::{filter::LevelFilter, util::SubscriberInitExt};
 
-#[allow(clippy::unused_async)]
-pub async fn run() {
+#[tokio::main]
+async fn main() {
     init_log();
 
     app_logger::debug!(config = ?*Config::global(), "Running with config");

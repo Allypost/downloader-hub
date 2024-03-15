@@ -147,24 +147,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "080e9890a082662b09c1ad45f567faeeb47f22b5fb23895fbe1e651e718e25ca"
 
 [[package]]
-name = "app-cli"
-version = "0.4.0"
-dependencies = [
- "app-config",
- "app-downloader",
- "app-fixers",
- "app-logger",
- "futures",
- "rayon",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "url",
-]
-
-[[package]]
 name = "app-config"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -181,7 +165,7 @@ dependencies = [
 
 [[package]]
 name = "app-downloader"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "app-config",
  "app-fixers",
@@ -205,7 +189,7 @@ dependencies = [
 
 [[package]]
 name = "app-entities"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -218,7 +202,7 @@ dependencies = [
 
 [[package]]
 name = "app-fixers"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "app-config",
@@ -238,7 +222,7 @@ dependencies = [
 
 [[package]]
 name = "app-helpers"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "app-config",
@@ -254,7 +238,7 @@ dependencies = [
 
 [[package]]
 name = "app-logger"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "tracing",
  "tracing-subscriber",
@@ -271,48 +255,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "app-server"
-version = "0.4.0"
-dependencies = [
- "anyhow",
- "app-config",
- "app-downloader",
- "app-entities",
- "app-fixers",
- "app-helpers",
- "app-logger",
- "app-migration",
- "app-validators",
- "axum",
- "axum-extra",
- "chrono",
- "deadqueue",
- "dotenvy",
- "file-format",
- "futures",
- "hmac",
- "http-range-header",
- "infer",
- "listenfd",
- "once_cell",
- "sea-orm",
- "serde",
- "serde_json",
- "sha2",
- "thiserror",
- "tokio",
- "tokio-util",
- "tower",
- "tower-http",
- "tracing",
- "tree_magic_mini",
- "ulid",
- "url",
-]
-
-[[package]]
 name = "app-validators"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "dns-lookup",
@@ -1221,13 +1165,59 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1aaf95b3e5c8f23aa320147307562d361db0ae0d51242340f558153b4eb2439b"
 
 [[package]]
-name = "downloader-hub"
-version = "0.4.0"
+name = "downloader-cli"
+version = "0.5.0"
 dependencies = [
- "app-cli",
- "app-server",
- "serde",
+ "app-config",
+ "app-downloader",
+ "app-fixers",
+ "app-logger",
+ "futures",
+ "rayon",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+]
+
+[[package]]
+name = "downloader-hub"
+version = "0.5.0"
+dependencies = [
+ "anyhow",
+ "app-config",
+ "app-downloader",
+ "app-entities",
+ "app-fixers",
+ "app-helpers",
+ "app-logger",
+ "app-migration",
+ "app-validators",
+ "axum",
+ "axum-extra",
+ "chrono",
+ "deadqueue",
+ "dotenvy",
+ "file-format",
+ "futures",
+ "hmac",
+ "http-range-header",
+ "infer",
+ "listenfd",
+ "once_cell",
+ "sea-orm",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror",
+ "tokio",
+ "tokio-util",
+ "tower",
+ "tower-http",
+ "tracing",
+ "tree_magic_mini",
+ "ulid",
+ "url",
 ]
 
 [[package]]
