@@ -1,7 +1,7 @@
 #[tokio::main]
 #[allow(unreachable_code)]
 async fn main() {
-    #[cfg(all(feature = "server", feature = "cli"))]
+    #[cfg(all(feature = "server", feature = "cli", not(feature = "clippy")))]
     {
         return compile_error!("Can't use both `cli` and `server` features at the same time");
     }

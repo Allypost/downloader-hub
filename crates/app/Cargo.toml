@@ -18,3 +18,4 @@ workspace = true
 default = []
 server = ["app-server"]
 cli = ["app-cli"]
+clippy = []
