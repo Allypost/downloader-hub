@@ -43,8 +43,9 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let listener = match listenfd.take_tcp_listener(0)? {
         Some(listener) => TcpListener::from_std(listener).expect("Failed to create listener"),
         None => {
-            let host = Config::global().server.run.host.clone();
-            let port = Config::global().server.run.port;
+            let server_config = &Config::global().server().run;
+            let host = server_config.host.clone();
+            let port = server_config.port;
 
             TcpListener::bind((host, port))
                 .await

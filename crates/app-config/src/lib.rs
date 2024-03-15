@@ -32,15 +32,8 @@ pub struct Config {
     #[validate]
     pub endpoint: common::EndpointConfig,
 
-    #[cfg(feature = "server")]
-    /// Config for the server
     #[validate]
-    pub server: conditional::server::ServerConfig,
-
-    #[cfg(feature = "cli")]
-    /// Config for the CLI
-    #[validate]
-    pub cli: conditional::cli::CliConfig,
+    pub conditional: conditional::ConditionalConfig,
 }
 impl Config {
     #[must_use]
@@ -64,6 +57,18 @@ impl Config {
             || env::temp_dir().join(APPLICATION_NAME),
             |x| x.cache_dir().into(),
         )
+    }
+
+    #[cfg(feature = "cli")]
+    #[must_use]
+    pub const fn cli(&self) -> &conditional::cli::CliConfig {
+        &self.conditional.cli
+    }
+
+    #[cfg(feature = "server")]
+    #[must_use]
+    pub const fn server(&self) -> &conditional::server::ServerConfig {
+        &self.conditional.server
     }
 
     #[must_use]
@@ -117,16 +122,7 @@ impl Config {
         self.run = args.run;
         self.dependency_paths = args.dependency_path;
         self.endpoint = args.endpoint;
-
-        #[cfg(feature = "server")]
-        {
-            self.server = args.server;
-        }
-
-        #[cfg(feature = "cli")]
-        {
-            self.cli = args.cli;
-        }
+        self.conditional = args.conditional;
 
         self
     }

@@ -92,7 +92,7 @@ impl AuthorizationSchema {
                 Some(res)
             }
 
-            Self::AdminKey(ref key) if Config::global().server.run.admin_key == *key => {
+            Self::AdminKey(ref key) if Config::global().server().run.admin_key == *key => {
                 Some(CurrentUser {
                     id: ADMIN_ID,
                     name: "admin".to_string(),

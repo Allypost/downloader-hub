@@ -16,7 +16,7 @@ pub async fn run() {
     let files = get_explicit_files();
     let mut files = print_errors("files", files);
 
-    for x in &Config::global().cli.entries_group.urls_or_files {
+    for x in &Config::global().cli().entries_group.urls_or_files {
         let mut errs = vec![];
 
         match parse_url(x) {
@@ -50,7 +50,7 @@ pub async fn run() {
                 tokio::task::spawn_blocking(move || {
                     app_downloader::download_file(&DownloadFileRequest::new(
                         &url,
-                        &Config::global().cli.download_directory,
+                        &Config::global().cli().download_directory,
                     ))
                     .into_iter()
                     .map(|x| x.map_err(|e| (url.to_string(), e)))
@@ -147,7 +147,7 @@ fn print_errors<T: Sized>(name: &str, maybe_errors: Vec<Result<T, String>>) -> V
 
 fn get_explicit_urls() -> Vec<Result<url::Url, String>> {
     Config::global()
-        .cli
+        .cli()
         .entries_group
         .urls
         .iter()
@@ -164,7 +164,7 @@ fn parse_url(u: &str) -> Result<url::Url, String> {
 
 fn get_explicit_files() -> Vec<Result<PathBuf, String>> {
     Config::global()
-        .cli
+        .cli()
         .entries_group
         .files
         .iter()

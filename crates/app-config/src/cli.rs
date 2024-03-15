@@ -1,7 +1,7 @@
 use clap::{ArgAction, Parser};
 use serde::{Deserialize, Serialize};
 
-use crate::common;
+use crate::{common, conditional};
 
 /// A hub for downloading media from various platforms,
 /// process the results and aggregate them in one place.
@@ -21,11 +21,6 @@ pub struct CliArgs {
     #[command(flatten)]
     pub run: common::RunConfig,
 
-    #[cfg(feature = "server")]
     #[command(flatten)]
-    pub server: crate::conditional::server::ServerConfig,
-
-    #[cfg(feature = "cli")]
-    #[command(flatten)]
-    pub cli: crate::conditional::cli::CliConfig,
+    pub conditional: conditional::ConditionalConfig,
 }

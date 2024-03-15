@@ -45,7 +45,7 @@ impl Signature {
         T: AsRef<[u8]>,
     {
         let mut mac =
-            SignatureHmac::new_from_slice(Config::global().server.run.signing_key.as_bytes())
+            SignatureHmac::new_from_slice(Config::global().server().run.signing_key.as_bytes())
                 .expect("Failed to create Hmac instance");
         mac.update(for_data.as_ref());
         mac.update(&signature_enc::timestamp_to_int(&issued).to_le_bytes());
@@ -80,7 +80,7 @@ impl Signature {
         let base_url = BASE
             .get_or_try_init(|| {
                 let mut base_url = Config::global()
-                    .server
+                    .server()
                     .app
                     .public_url
                     .trim_end_matches('/')

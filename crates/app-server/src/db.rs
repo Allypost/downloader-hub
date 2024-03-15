@@ -20,7 +20,7 @@ impl AppDb {
 
         app_logger::debug!("Initializing database");
 
-        let mut opt = sea_orm::ConnectOptions::new(&Config::global().server.database.url);
+        let mut opt = sea_orm::ConnectOptions::new(&Config::global().server().database.url);
         opt.max_connections(50)
             .connect_timeout(Duration::from_secs(5))
             .acquire_timeout(Duration::from_secs(5))
