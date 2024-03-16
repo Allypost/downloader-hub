@@ -33,10 +33,6 @@ pub fn convert_into_preferred_formats(file_path: &Path) -> FixerReturn {
 }
 
 fn check_and_fix_file(file_path: &Path) -> Result<PathBuf, MediaFormatsError> {
-    if !file_path.exists() {
-        return Err(MediaFormatsError::NotFound(file_path.to_path_buf()));
-    }
-
     let file_format_info = ffprobe::ffprobe(file_path)?;
 
     trace!(
@@ -396,8 +392,6 @@ const CODEC_HANDLERS: &[CodecHandler] = &[
 
 #[derive(Debug, Error)]
 pub enum MediaFormatsError {
-    #[error("File not found: {0:?}")]
-    NotFound(PathBuf),
     #[error(transparent)]
     FfProbeError(#[from] ffprobe::FfProbeError),
     #[error("Failed to get image stream of {0:?}")]

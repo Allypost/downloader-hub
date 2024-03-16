@@ -58,6 +58,14 @@ pub mod as_future {
             .canonicalize()
             .map_err(|e| FixerError::FailedToCanonicalizePath(path.to_path_buf(), e))?;
 
+        if !p.exists() {
+            return Err(FixerError::FileNotFound(p));
+        }
+
+        if !p.is_file() {
+            return Err(FixerError::NotAFile(p));
+        }
+
         let transfer_file_times = transferable_file_times(&p);
 
         let fixers = fixers.to_vec();

@@ -12,6 +12,10 @@ pub enum FixerError {
     FailedToCanonicalizePath(PathBuf, #[source] std::io::Error),
     #[error(transparent)]
     JoinError(#[from] tokio::task::JoinError),
+    #[error("File {0:?} not found")]
+    FileNotFound(PathBuf),
+    #[error("{0:?} is not a file")]
+    NotAFile(PathBuf),
 }
 impl FixerError {
     pub fn failed_fix<T>(err: T) -> Self
