@@ -55,11 +55,12 @@ COPY --from=planner /app/recipe.json .
 # Build dependencies
 ARG RUST_TARGET
 ARG APP_FEATURES
+ARG BINARY_NAME
 RUN cargo chef cook \
   --release \
   --target "${RUST_TARGET}" \
-  --features "$APP_FEATURES" \
-  --bin "${BINARY_NAME}" \
+  --features "${APP_FEATURES}" \
+  --package "${BINARY_NAME}" \
   --recipe-path recipe.json
 # Copy rest of files and compile
 # only the remaining app code
@@ -69,9 +70,9 @@ ARG APP_FEATURES
 ARG BINARY_NAME
 RUN cargo build \
   --release \
-  --target="${RUST_TARGET}" \
-  --features "$APP_FEATURES" \
-  --bin "${BINARY_NAME}"
+  --target "${RUST_TARGET}" \
+  --features "${APP_FEATURES}" \
+  --package "${BINARY_NAME}"
 
 
 ##########
@@ -123,8 +124,9 @@ ARG BINARY_NAME
 COPY --from=builder "/app/target/${RUST_TARGET}/release/${BINARY_NAME}" /usr/local/bin/
 RUN chmod a=rx "/usr/local/bin/${BINARY_NAME}"
 # Run app
-RUN echo "#!/bin/bash\n\n/usr/local/bin/${BINARY_NAME} \$@" > /entrypoint.sh && chmod +x /entrypoint.sh
+RUN echo "#!/bin/bash\n\n/usr/local/bin/${BINARY_NAME} \"\$@\"" > /entrypoint.sh && chmod +x /entrypoint.sh
 USER ${RUN_USERNAME}
 LABEL org.opencontainers.image.authors="me@allypost.net"
+EXPOSE 8000
 ENTRYPOINT [ "/entrypoint.sh" ]
 CMD [ "--help" ]
