@@ -4,7 +4,9 @@ use app_logger::{debug, trace};
 use once_cell::sync::Lazy;
 use regex::Regex;
 
-use super::{DownloadFileRequest, Downloader, ResolvedDownloadFileRequest};
+use super::{
+    generic::GenericDownloader, DownloadFileRequest, Downloader, ResolvedDownloadFileRequest,
+};
 use crate::{common::request::Client, DownloaderReturn};
 
 pub static URL_MATCH: Lazy<Regex> = Lazy::new(|| {
@@ -32,8 +34,19 @@ impl Downloader for InstagramDownloader {
         })
     }
 
-    fn download_resolved(&self, _resolved_file: &ResolvedDownloadFileRequest) -> DownloaderReturn {
-        todo!()
+    fn download_resolved(&self, resolved_file: &ResolvedDownloadFileRequest) -> DownloaderReturn {
+        let thread_pool = rayon::ThreadPoolBuilder::new().num_threads(1).build();
+
+        let thread_pool = match thread_pool {
+            Ok(x) => x,
+            Err(e) => {
+                app_logger::error!("Failed to create thread pool: {:?}", e);
+
+                return vec![Err(format!("Failed to create thread pool: {:?}", e))];
+            }
+        };
+
+        thread_pool.install(|| GenericDownloader.download_resolved(resolved_file))
     }
 }
 
