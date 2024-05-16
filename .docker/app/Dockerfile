@@ -24,6 +24,7 @@ RUN apt-get update && apt-get install -y \
   bash \
   musl-tools \
   musl-dev \
+  jq \
   && rm -rf /var/lib/apt/lists/*
 # Install cargo-binstall
 RUN curl -L --proto '=https' --tlsv1.2 -sSf 'https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh' | bash
@@ -56,6 +57,18 @@ RUN cargo chef prepare \
 ## Build app with the cached dependencies
 ##
 FROM chef AS builder
+# Install upx - https://upx.github.io/
+RUN cd "$(mktemp --directory)" && \
+  curl -sL "$(\
+  curl -sL https://api.github.com/repos/upx/upx/releases \
+  | jq -r '.[0].assets | .[] | select(.name | test("amd64_linux")) | .browser_download_url' \
+  | head -n1\
+  )" | tar xvJ  && \
+  cd * && \
+  mv upx /usr/bin && \
+  cd .. && \
+  rm -rf "$(pwd)" && \
+  echo "Installed upx"
 COPY --from=planner /app/recipe.json .
 # Build dependencies
 ARG RUST_TARGET
@@ -80,6 +93,7 @@ RUN cargo build \
   --target "${RUST_TARGET}" \
   --features "${APP_FEATURES}" \
   --package "${BINARY_NAME}"
+RUN upx --best --lzma "/app/target/${RUST_TARGET}/release/${BINARY_NAME}"
 
 
 ##########
