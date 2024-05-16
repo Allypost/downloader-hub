@@ -10,7 +10,7 @@ impl AppUidFor {
         let ulid = Ulid::new();
         let time_id = app_helpers::id::time_thread_id();
 
-        format!("{}_{}_{}", self.to_string(), ulid, time_id)
+        format!("{}_{}_{}", self, ulid, time_id)
     }
 
     pub fn client() -> String {
@@ -25,13 +25,12 @@ impl AppUidFor {
         Self::DownloadResult.generate()
     }
 }
-impl ToString for AppUidFor {
-    fn to_string(&self) -> String {
+impl std::fmt::Display for AppUidFor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Client => "dhck",
-            Self::DownloadRequest => "dhrq",
-            Self::DownloadResult => "dhrs",
+            Self::Client => write!(f, "dhck"),
+            Self::DownloadRequest => write!(f, "dhrq"),
+            Self::DownloadResult => write!(f, "dhrs"),
         }
-        .to_string()
     }
 }

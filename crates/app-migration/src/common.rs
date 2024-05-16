@@ -30,14 +30,13 @@ impl GenKeyType {
         )
     }
 }
-impl ToString for GenKeyType {
-    fn to_string(&self) -> String {
+impl std::fmt::Display for GenKeyType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::ForeignKey => "fk",
-            Self::Index => "idx",
-            Self::Trigger => "trigger",
+            Self::ForeignKey => write!(f, "fk"),
+            Self::Index => write!(f, "idx"),
+            Self::Trigger => write!(f, "trigger"),
         }
-        .to_string()
     }
 }
 
@@ -56,7 +55,7 @@ where
         parts
     });
 
-    format!("{}-{}", for_type.to_string(), hash)
+    format!("{}-{}", for_type, hash)
 }
 
 pub fn generate_index<TTable, TColumn>(table: TTable, cols: Vec<TColumn>) -> IndexCreateStatement
