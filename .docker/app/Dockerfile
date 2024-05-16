@@ -1,4 +1,4 @@
-ARG RUST_VERSION='1.76'
+ARG RUST_VERSION='1.78'
 ARG RUST_TARGET='x86_64-unknown-linux-musl'
 ARG BINARY_NAME='downloader-hub'
 
@@ -19,7 +19,12 @@ ARG FFMPEG_DOWNLOAD_URL='https://johnvansickle.com/ffmpeg/releases/ffmpeg-releas
 FROM rust:${RUST_VERSION} AS chef
 # `curl` and `bash` are needed for cargo-binstall
 # `musl-tools` and `musl-dev` are needed to build app with musl target
-RUN apt-get update && apt-get install -y curl bash musl-tools musl-dev
+RUN apt-get update && apt-get install -y \
+  curl \
+  bash \
+  musl-tools \
+  musl-dev \
+  && rm -rf /var/lib/apt/lists/*
 # Install cargo-binstall
 RUN curl -L --proto '=https' --tlsv1.2 -sSf 'https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh' | bash
 # Install cargo-chef
@@ -62,6 +67,8 @@ RUN cargo chef cook \
   --features "${APP_FEATURES}" \
   --package "${BINARY_NAME}" \
   --recipe-path recipe.json
+ARG RUST_TARGET
+RUN rustup target add "${RUST_TARGET}"
 # Copy rest of files and compile
 # only the remaining app code
 COPY . .
@@ -90,6 +97,7 @@ RUN apt-get update && apt-get install -y \
   python3 \
   xattr \
   xz-utils \
+  && rm -rf /var/lib/apt/lists/* \
   && echo "Done installing packages"
 # Install latest ffmpeg
 ARG FFMPEG_DOWNLOAD_URL
@@ -126,7 +134,12 @@ RUN chmod a=rx "/usr/local/bin/${BINARY_NAME}"
 # Run app
 RUN echo "#!/bin/bash\n\n/usr/local/bin/${BINARY_NAME} \"\$@\"" > /entrypoint.sh && chmod +x /entrypoint.sh
 USER ${RUN_USERNAME}
-LABEL org.opencontainers.image.authors="me@allypost.net"
+LABEL maintainer="Josip Igrec <me@allypost.net>"
+LABEL org.opencontainers.image.title="downloader-hub"
+LABEL org.opencontainers.image.description="A simple hub to allow clients to download files from various sources"
+LABEL org.opencontainers.image.source="https://github.com/Allypost/downloader-hub"
+LABEL org.opencontainers.image.licenses="MPL-2.0"
+LABEL org.opencontainers.image.authors="Josip Igrec <me@allypost.net>"
 EXPOSE 8000
 ENTRYPOINT [ "/entrypoint.sh" ]
 CMD [ "--help" ]
