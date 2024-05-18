@@ -37,21 +37,25 @@ pub struct Config {
 }
 impl Config {
     #[must_use]
+    #[inline]
     pub fn global() -> &'static Self {
         &CONFIG
     }
 
     #[must_use]
+    #[inline]
     pub fn config_dir() -> Option<PathBuf> {
         Self::get_project_dir().map(|x| x.config_dir().into())
     }
 
     #[must_use]
+    #[inline]
     pub fn get_config_dir(&self) -> Option<PathBuf> {
         Self::config_dir()
     }
 
     #[must_use]
+    #[inline]
     pub fn cache_dir() -> PathBuf {
         Self::get_project_dir().map_or_else(
             || env::temp_dir().join(APPLICATION_NAME),
@@ -61,17 +65,20 @@ impl Config {
 
     #[cfg(feature = "cli")]
     #[must_use]
+    #[inline]
     pub const fn cli(&self) -> &conditional::cli::CliConfig {
         &self.conditional.cli
     }
 
     #[cfg(feature = "server")]
     #[must_use]
+    #[inline]
     pub const fn server(&self) -> &conditional::server::ServerConfig {
         &self.conditional.server
     }
 
     #[must_use]
+    #[inline]
     pub fn get_cache_dir(&self) -> PathBuf {
         Self::cache_dir()
     }
@@ -98,6 +105,7 @@ impl Config {
         }
     }
 
+    #[inline]
     pub fn validate_config_and_exit<T: Validate>(conf: T) -> T {
         if let Err(e) = conf.validate() {
             eprintln!("Errors validating configuration:");
@@ -138,10 +146,12 @@ impl Config {
         self
     }
 
+    #[inline]
     fn validate_self(self) -> Self {
         Self::validate_config_and_exit(self)
     }
 
+    #[inline]
     fn get_project_dir() -> Option<ProjectDirs> {
         ProjectDirs::from(ORGANIZATION_QUALIFIER, ORGANIZATION_NAME, APPLICATION_NAME)
     }
