@@ -11,24 +11,31 @@ build:
     RUSTFLAGS='{{rustflags}}' \
     cargo build --release --target '{{rust_target}}'
 
-dev *args: (dev-watch args)
+dev *args: (dev-watch-server args)
 
-dev-watch *args:
+dev-watch-server *args:
     RUSTFLAGS='{{rustflags}}' \
     cargo watch \
         --clear \
         --quiet \
         --watch './crates' \
         --ignore 'crates/app-migration/**/*' \
-        --exec 'run --target "{{rust_target}}" -- {{args}}' \
+        --exec 'run --target "{{rust_target}}" --package "downloader-hub" -- {{args}}' \
 
-dev-run *args:
+dev-run package *args:
     RUSTFLAGS='{{rustflags}}' \
-    cargo run --target "{{rust_target}}" -- {{args}} \
+    cargo run \
+        --target "{{rust_target}}" \
+        --package '{{package}}' \
+        -- {{args}} \
+
+dev-run-server *args: (dev-run 'downloader-hub' args)
+
+dev-run-cli *args: (dev-run 'downloader-cli' args)
 
 migrate +ARGS: && generate-entities
     cd ./crates/app-migration \
-    && cargo run -- $@ \
+    && cargo run -- "$@" \
 
 migrate-up:
     just migrate up
