@@ -1,3 +1,5 @@
+use std::string::ToString;
+
 use once_cell::sync::Lazy;
 use regex::Regex;
 
@@ -6,8 +8,8 @@ use super::{
 };
 use crate::DownloaderReturn;
 
-pub static URL_MATCH: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"^https?://(www\.)?tumblr\.com/(?P<username>[^/]+)/(?P<post_id>[0-9]+)(/|/[^/]+)?")
+static DOMAIN_MATCH: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^(?:(?P<subdomain>[^\-][a-zA-Z0-9\-]{0,30}[^\-])\.)?tumblr\.com")
         .expect("Invalid regex")
 });
 
@@ -34,7 +36,17 @@ impl Downloader for TumblrDownloader {
 
 impl TumblrDownloader {
     pub fn is_post_url(url: &str) -> bool {
-        URL_MATCH.is_match(url)
+        let Some(domain) = Self::domain_from_url(url) else {
+            return false;
+        };
+
+        DOMAIN_MATCH.is_match(&domain)
+    }
+
+    fn domain_from_url(url: &str) -> Option<String> {
+        url::Url::parse(url)
+            .ok()
+            .and_then(|x| x.domain().map(ToString::to_string))
     }
 }
 
