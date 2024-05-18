@@ -15,6 +15,7 @@ Currently there is no UI for the hub. All interactions are done via the API.
 ### Runtime dependencies
 
 The app requires some external dependencies to effectively download and process files:
+
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp) | Download and process videos
 - [ffmpeg](https://ffmpeg.org/) | Convert videos to standard formats
 - [ffprobe](https://ffmpeg.org/ffprobe.html)
@@ -23,7 +24,8 @@ The app requires some external dependencies to effectively download and process 
 A [PostgreSQL](https://www.postgresql.org/) database is also required for the hub.
 
 ### Usage
-```
+
+```text
 A hub for downloading media from various platforms, process the results and aggregate them in one place
 
 Usage: downloader-hub [OPTIONS] --admin-key <ADMIN_KEY> --signing-key <SIGNING_KEY> --database-url <URL> --public-url <PUBLIC_URL>
