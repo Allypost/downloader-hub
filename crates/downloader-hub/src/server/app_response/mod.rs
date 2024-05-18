@@ -12,6 +12,7 @@ pub mod range_responder;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[allow(clippy::pub_underscore_fields)]
 pub struct ApiResponse<TBody = ()> {
     /// Response metadata
     ///

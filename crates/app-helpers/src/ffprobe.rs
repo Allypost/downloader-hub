@@ -134,7 +134,7 @@ pub struct Stream {
     pub max_bit_rate: Option<String>,
     pub nb_frames: Option<String>,
     /// Number of frames seen by the decoder.
-    /// Requires full decoding and is only available if the 'count_frames'
+    /// Requires full decoding and is only available if the `count_frames`
     /// setting was enabled.
     pub nb_read_frames: Option<String>,
     pub codec_long_name: Option<String>,

@@ -47,7 +47,7 @@ pub struct ServerRunConfig {
 #[derive(Debug, Clone, Default, Serialize, Deserialize, Args, Validate)]
 #[clap(next_help_heading = "Database options")]
 pub struct DatabaseConfig {
-    /// PostgreSQL database URL.
+    /// `PostgreSQL` database URL.
     ///
     /// Should be in the format of `postgres://username:password@db-host:5432/database-name`
     #[clap(long = "database-url", env = "DATABASE_URL")]
