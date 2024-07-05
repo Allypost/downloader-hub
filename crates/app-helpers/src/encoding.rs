@@ -42,29 +42,34 @@ pub trait BaseEncoding: Sized {
 
 macro_rules! impl_base_encoding {
     ($type:ty) => {
+        impl_base_encoding!($type, u32);
+    };
+    ($type:ty, $base_type:ty) => {
         impl BaseEncoding for $type {
-            fn to_base(self, base: u32) -> String {
+            fn to_base(self, base: $base_type) -> String {
                 assert!(
                     base as usize <= BASE36_CHARS.len(),
                     "Invalid base: {}",
                     base
                 );
 
-                let base = base as $type;
+                let base = Self::try_from(base).expect("Should be valid base");
 
                 let mut result = String::new();
                 let mut data = self;
 
                 while data > 0 {
-                    result.push(BASE36_CHARS[(data % base) as usize]);
+                    result.push(
+                        BASE36_CHARS[usize::try_from(data % base).expect("Should be valid index")],
+                    );
                     data /= base;
                 }
 
                 result.chars().rev().collect()
             }
 
-            fn convert_from_base(str: &str, base: u32) -> Result<Self, String> {
-                Self::from_str_radix(str, base).map_err(|e| e.to_string())
+            fn convert_from_base(s: &str, base: $base_type) -> Result<Self, String> {
+                Self::from_str_radix(s, base).map_err(|e| e.to_string())
             }
         }
     };
