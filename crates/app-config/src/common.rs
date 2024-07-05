@@ -3,10 +3,13 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use clap::{Args, ValueEnum, ValueHint};
+use clap::{Args, CommandFactory, ValueEnum, ValueHint};
+use clap_complete::Shell;
 use serde::{Deserialize, Serialize};
 use url::Url;
 use validator::{Validate, ValidationError};
+
+use crate::cli::CliArgs;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, Args, Validate)]
 #[allow(clippy::struct_field_names)]
@@ -120,6 +123,11 @@ pub struct RunConfig {
     /// Dump the config to stdout
     #[arg(long, value_enum, default_value = None)]
     pub dump_config: Option<Option<DumpConfigType>>,
+
+    /// Dump shell completions to stdout
+    #[arg(long, default_value = None, value_name = "SHELL", value_parser = hacky_dump_completions())]
+    #[serde(skip)]
+    pub dump_completions: Option<Shell>,
 }
 
 #[must_use]
@@ -159,6 +167,35 @@ pub fn validate_absolute_url() -> impl clap::builder::TypedValueParser {
         }
 
         Ok(s.trim_end_matches('/').to_string())
+    }
+}
+
+#[must_use]
+pub fn hacky_dump_completions() -> impl clap::builder::TypedValueParser {
+    move |s: &str| {
+        let parsed = Shell::from_str(s, true);
+
+        if let Ok(shell) = &parsed {
+            let bin_name = if cfg!(feature = "server") {
+                "downloader-hub"
+            } else if cfg!(feature = "cli") {
+                "downloader-cli"
+            } else {
+                return Err(ValidationError::new("Unknown application name"));
+            };
+
+            clap_complete::generate(
+                *shell,
+                &mut CliArgs::command(),
+                bin_name,
+                &mut std::io::stdout(),
+            );
+            std::process::exit(0);
+        }
+
+        parsed
+            .map(|_| ())
+            .map_err(|_| ValidationError::new("Invalid shell"))
     }
 }
 
