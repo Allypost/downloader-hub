@@ -16,24 +16,24 @@ app-helpers.workspace = true
 app-logger.workspace = true
 app-migration = { version = "*", path = "../app-migration" }
 app-validators = { version = "*", path = "../app-validators" }
-axum = { version = "0.7.4", features = ["macros", "multipart"] }
-axum-extra = { version = "0.9.2", features = [
+axum = { version = "0.7.5", features = ["macros", "multipart"] }
+axum-extra = { version = "0.9.3", features = [
     "erased-json",
     "form",
     "multipart",
     "typed-header",
 ] }
-chrono = { version = "0.4.33", features = ["alloc", "serde"] }
+chrono = { version = "0.4.38", features = ["alloc", "serde"] }
 deadqueue = "0.2.4"
 dotenvy = "0.15.7"
-file-format = { version = "0.24.0", features = ["reader"] }
+file-format = { version = "0.25.0", features = ["reader"] }
 futures = { version = "0.3.30", features = ["thread-pool"] }
 hmac = "0.12.1"
-http-range-header = "0.4.0"
-infer = "0.15.0"
+http-range-header = "0.4.1"
+infer = "0.16.0"
 listenfd = "1.0.1"
 once_cell.workspace = true
-sea-orm = { version = "0.12.14", features = [
+sea-orm = { version = "0.12.15", features = [
     "macros",
     "sqlx-postgres",
     "runtime-tokio-rustls",
@@ -44,14 +44,13 @@ serde.workspace = true
 serde_json.workspace = true
 sha2 = "0.10.8"
 thiserror.workspace = true
-tokio = { version = "1.36.0", features = ["full"] }
-tokio-util = { version = "0.7.10", features = ["full"] }
+tokio.workspace = true
 tower = "0.4.13"
-tower-http = { version = "0.5.1", features = ["full"] }
+tower-http = { version = "0.5.2", features = ["full"] }
 tracing.workspace = true
-tree_magic_mini = "3.0.3"
+tree_magic_mini = "3.1.5"
 ulid = { version = "1.1.2", features = ["postgres"] }
-url = { version = "2.5.0", features = ["serde"] }
+url = { version = "2.5.2", features = ["serde"] }
 
 [lints]
 workspace = true

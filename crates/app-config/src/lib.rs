@@ -21,18 +21,18 @@ pub static ORGANIZATION_QUALIFIER: &str = "net";
 #[derive(Debug, Clone, Default, Serialize, Deserialize, Validate)]
 pub struct Config {
     #[serde(skip)]
-    #[validate]
+    #[validate(nested)]
     pub run: common::RunConfig,
 
     /// Path to various programs used by the application at runtime
-    #[validate]
+    #[validate(nested)]
     pub dependency_paths: common::ProgramPathConfig,
 
     /// Specifying external endpoints that the application will use
-    #[validate]
+    #[validate(nested)]
     pub endpoint: common::EndpointConfig,
 
-    #[validate]
+    #[validate(nested)]
     pub conditional: conditional::ConditionalConfig,
 }
 impl Config {

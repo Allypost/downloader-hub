@@ -10,10 +10,10 @@ license.workspace = true
 
 [dependencies]
 anyhow.workspace = true
-chrono = { version = "0.4.31", features = ["alloc", "serde"] }
-http = "1.0.0"
-http-serde = "2.0.0"
-sea-orm = "0.12.3"
+chrono = { version = "0.4.38", features = ["alloc", "serde"] }
+http = "1.1.0"
+http-serde = "2.1.1"
+sea-orm = "0.12.15"
 serde.workspace = true
 serde_json.workspace = true
 

@@ -170,11 +170,16 @@ mod signature_enc {
         Ok(ts)
     }
 
-    pub fn timestamp_to_int(timestamp: &DateTime<Utc>) -> i64 {
+    pub const fn timestamp_to_int(timestamp: &DateTime<Utc>) -> i64 {
         timestamp.timestamp()
     }
 
     pub const fn int_to_timestamp(int: i64) -> Option<NaiveDateTime> {
-        NaiveDateTime::from_timestamp_opt(int, 0)
+        let ts = match DateTime::from_timestamp(int, 0) {
+            Some(ts) => ts,
+            None => return None,
+        };
+
+        Some(ts.naive_utc())
     }
 }

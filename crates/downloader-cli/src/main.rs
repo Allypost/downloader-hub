@@ -196,9 +196,8 @@ fn init_log() {
         .with_env_filter(
             tracing_subscriber::filter::Builder::default()
                 .with_default_directive(LevelFilter::INFO.into())
-                .with_env_var(tracing_subscriber::EnvFilter::DEFAULT_ENV)
-                .parse("")
-                .expect("Failed to parse default env filter"),
+                .with_env_var("DOWNLOADER_HUB_LOG_LEVEL")
+                .from_env_lossy(),
         )
         .finish()
         .init();

@@ -134,12 +134,7 @@ pub fn validate_valid_path() -> impl clap::builder::TypedValueParser {
     }
 }
 
-pub fn valid_path(path: &Option<PathBuf>) -> Result<(), ValidationError> {
-    let path = match path {
-        Some(path) => path,
-        None => return Ok(()),
-    };
-
+pub fn valid_path(path: &Path) -> Result<(), ValidationError> {
     if !path.exists() {
         return Err(ValidationError::new("File does not exist"));
     }

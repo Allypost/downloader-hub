@@ -7,15 +7,15 @@ use crate::common::{absolute_url, validate_absolute_url, validate_min_key_length
 #[derive(Debug, Clone, Default, Serialize, Deserialize, Args, Validate)]
 pub struct ServerConfig {
     #[clap(flatten)]
-    #[validate]
+    #[validate(nested)]
     pub run: ServerRunConfig,
 
     #[clap(flatten)]
-    #[validate]
+    #[validate(nested)]
     pub database: DatabaseConfig,
 
     #[clap(flatten)]
-    #[validate]
+    #[validate(nested)]
     pub app: AppConfig,
 }
 

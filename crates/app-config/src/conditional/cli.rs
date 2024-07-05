@@ -10,7 +10,7 @@ use crate::common::validate_valid_path;
 #[clap(next_help_heading = "Cli options")]
 pub struct CliConfig {
     #[clap(flatten)]
-    #[validate]
+    #[validate(nested)]
     #[serde(skip)]
     pub entries_group: UrlGroup,
 

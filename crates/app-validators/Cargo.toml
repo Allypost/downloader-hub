@@ -15,7 +15,7 @@ ipnet = "2.9.0"
 iprange = "0.6.7"
 once_cell.workspace = true
 thiserror.workspace = true
-url = { version = "2.5.0", features = ["serde"] }
+url = { version = "2.5.2", features = ["serde"] }
 
 [lints]
 workspace = true

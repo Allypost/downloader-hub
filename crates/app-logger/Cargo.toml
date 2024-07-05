@@ -8,7 +8,7 @@ license.workspace = true
 
 [dependencies]
 tracing.workspace = true
-tracing-subscriber = { version = "0.3.18", features = ["env-filter", "local-time", "serde", "json", "parking_lot"] }
+tracing-subscriber = { version = "0.3.18", features = ["env-filter", "parking_lot", "smallvec"] }
 
 [lints]
 workspace = true

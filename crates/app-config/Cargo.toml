@@ -10,16 +10,16 @@ license.workspace = true
 
 [dependencies]
 anyhow.workspace = true
-clap = { version = "4.3.3", features = ["derive", "env"] }
+clap = { version = "4.5.8", features = ["derive", "env"] }
 directories = "5.0.1"
 once_cell.workspace = true
 resolve-path = "0.1.0"
 serde.workspace = true
 serde_json.workspace = true
-toml = "0.8.10"
-url = { version = "2.5.0", features = ["serde"] }
-validator = { version = "0.17.0", features = ["derive"] }
-which = "6.0.0"
+toml = "0.8.14"
+url = { version = "2.5.2", features = ["serde"] }
+validator = { version = "0.18.1", features = ["derive"] }
+which = "6.0.1"
 
 [features]
 default = []

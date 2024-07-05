@@ -11,13 +11,13 @@ pub mod server;
 pub struct ConditionalConfig {
     #[cfg(feature = "server")]
     /// Config for the server
-    #[validate]
+    #[validate(nested)]
     #[clap(flatten)]
     pub server: server::ServerConfig,
 
     #[cfg(feature = "cli")]
     /// Config for the CLI
-    #[validate]
+    #[validate(nested)]
     #[clap(flatten)]
     pub cli: cli::CliConfig,
 }
