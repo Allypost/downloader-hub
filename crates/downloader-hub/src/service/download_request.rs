@@ -38,13 +38,14 @@ impl DownloadRequestService {
             .map(|x| x.request_uid.clone().unwrap())
             .collect::<Vec<_>>();
 
-        let requests = db
-            .transaction_with_config::<_, _, DbErr>(
-                |tx| {
-                    let uids = uids.clone();
+        let requests = app_helpers::futures::retry_fn(5, || {
+            let payloads = payloads.clone();
+            let uids = uids.clone();
 
+            db.transaction_with_config::<_, _, DbErr>(
+                |tx| {
                     Box::pin(async move {
-                        download_request::Entity::insert_many(payloads)
+                        download_request::Entity::insert_many(payloads.clone())
                             .exec(tx)
                             .await?;
 
@@ -57,10 +58,11 @@ impl DownloadRequestService {
                 Some(IsolationLevel::Serializable),
                 Some(AccessMode::ReadWrite),
             )
-            .await
-            .map_err(|e| match e {
-                TransactionError::Transaction(e) | TransactionError::Connection(e) => e,
-            })?;
+        })
+        .await
+        .map_err(|e| match e {
+            TransactionError::Transaction(e) | TransactionError::Connection(e) => e,
+        })?;
 
         for uid in uids {
             TASK_QUEUE.push(Task::download_request(uid));

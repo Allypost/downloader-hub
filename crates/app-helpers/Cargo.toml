@@ -17,6 +17,7 @@ trash = "5.0.0"
 futures = { version = "0.3.30", features = ["thread-pool"] }
 tokio.workspace = true
 thiserror.workspace = true
+tryhard = "0.5.1"
 
 [lints]
 workspace = true

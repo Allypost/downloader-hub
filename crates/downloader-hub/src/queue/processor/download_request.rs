@@ -100,8 +100,10 @@ async fn download(uid: &str) -> Result<(download_request::Model, Vec<AppPath>), 
 
     app_logger::debug!(?results, "Download completed successfully");
 
-    let results = db
-        .transaction_with_config::<_, _, DbErr>(
+    let results = app_helpers::futures::retry_fn(5, || {
+        let results = results.clone();
+
+        db.transaction_with_config::<_, _, DbErr>(
             |txn| {
                 let uid = uid.to_string();
                 Box::pin(async move {
@@ -141,11 +143,13 @@ async fn download(uid: &str) -> Result<(download_request::Model, Vec<AppPath>), 
             Some(sea_orm::IsolationLevel::Serializable),
             Some(sea_orm::AccessMode::ReadWrite),
         )
-        .await
-        .map_err(|e| match e {
-            sea_orm::TransactionError::Transaction(e)
-            | sea_orm::TransactionError::Connection(e) => HandlerError::Db(e),
-        })?;
+    })
+    .await
+    .map_err(|e| match e {
+        sea_orm::TransactionError::Transaction(e) | sea_orm::TransactionError::Connection(e) => {
+            HandlerError::Db(e)
+        }
+    })?;
 
     let successful = results
         .into_iter()

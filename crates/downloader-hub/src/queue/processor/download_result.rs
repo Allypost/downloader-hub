@@ -80,31 +80,37 @@ async fn fix(request_id: i32, app_path: AppPath) -> Result<(), HandlerError> {
             .await?;
         }
         Ok(new_path) => {
-            db.transaction_with_config::<_, _, DbErr>(
-                |tx| {
-                    Box::pin(async move {
-                        DownloadResultService::update_path(
-                            tx,
-                            request_id,
-                            AppPath::LocalAbsolute(path.clone()),
-                            AppPath::LocalAbsolute(new_path.clone()),
-                        )
-                        .await?;
+            app_helpers::futures::retry_fn(5, || async {
+                let path = path.clone();
+                let new_path = new_path.clone();
 
-                        DownloadResultService::update_status(
-                            tx,
-                            request_id,
-                            AppPath::LocalAbsolute(new_path.clone()),
-                            DownloadResultStatus::Success,
-                        )
-                        .await?;
+                db.transaction_with_config::<_, _, DbErr>(
+                    |tx| {
+                        Box::pin(async move {
+                            DownloadResultService::update_path(
+                                tx,
+                                request_id,
+                                AppPath::LocalAbsolute(path.clone()),
+                                AppPath::LocalAbsolute(new_path.clone()),
+                            )
+                            .await?;
 
-                        Ok(())
-                    })
-                },
-                Some(sea_orm::IsolationLevel::Serializable),
-                Some(sea_orm::AccessMode::ReadWrite),
-            )
+                            DownloadResultService::update_status(
+                                tx,
+                                request_id,
+                                AppPath::LocalAbsolute(new_path.clone()),
+                                DownloadResultStatus::Success,
+                            )
+                            .await?;
+
+                            Ok(())
+                        })
+                    },
+                    Some(sea_orm::IsolationLevel::Serializable),
+                    Some(sea_orm::AccessMode::ReadWrite),
+                )
+                .await
+            })
             .await?;
         }
     };
