@@ -343,7 +343,7 @@ const CODEC_HANDLERS: &[CodecHandler] = &[
         },
     },
     CodecHandler {
-        can_handle: |codec| matches!(codec, "png" | "mjpeg"),
+        can_handle: |codec| matches!(codec, "png" | "mjpeg" | "gif"),
         handle: |file_format_info, _matched_stream| {
             let from_path = PathBuf::from(file_format_info.format.filename.clone());
 
