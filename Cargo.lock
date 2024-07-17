@@ -192,6 +192,7 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tl",
+ "tracing",
  "unicode-segmentation",
  "url",
 ]

@@ -34,6 +34,7 @@ once_cell.workspace = true
 http-serde = "2.1.1"
 http = "1.1.0"
 form_urlencoded = "1.2.1"
+tracing.workspace = true
 
 [lints]
 workspace = true

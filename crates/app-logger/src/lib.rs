@@ -1,7 +1,7 @@
 use std::env;
 
 use tracing::Level;
-pub use tracing::{debug, error, info, trace, warn};
+pub use tracing::{debug, error, info, instrument, trace, warn};
 use tracing_subscriber::{filter::Directive, fmt, prelude::*, EnvFilter};
 
 pub const COMPONENT_LEVELS: &[(&str, Level)] = &[
