@@ -64,16 +64,19 @@ impl Downloader for TwitterDownloader {
 
         trace!(?tweet_media, "Got tweet media");
 
-        let tweet_screenshot_url = {
-            let endpoint = &Config::global().endpoint.twitter_screenshot_base_url;
+        // the `i` "username" is for media links, not direct link to tweet
+        if tweet_info.username != "i" {
+            let tweet_screenshot_url = {
+                let endpoint = &Config::global().endpoint.twitter_screenshot_base_url;
 
-            format!("{}/{}", endpoint.trim_end_matches('/'), req.original_url)
-        };
+                format!("{}/{}", endpoint.trim_end_matches('/'), req.original_url)
+            };
 
-        trace!("Adding Tweet screenshot URL: {:?}", &tweet_screenshot_url);
-        tweet_media.push(TweetMedia::Photo {
-            url: tweet_screenshot_url,
-        });
+            trace!("Adding Tweet screenshot URL: {:?}", &tweet_screenshot_url);
+            tweet_media.push(TweetMedia::Photo {
+                url: tweet_screenshot_url,
+            });
+        }
 
         let resolved_urls = tweet_media
             .into_iter()
