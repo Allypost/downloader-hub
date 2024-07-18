@@ -321,6 +321,7 @@ fn get_tweet_media_urls(tweet_data: &TweetData) -> Option<Vec<TweetMedia>> {
             url: String,
         },
         #[serde(rename = "video")]
+        #[serde(alias = "animated_gif")]
         Video { video_info: RespTweetMediaVideo },
     }
     impl RespTweetMedia {
