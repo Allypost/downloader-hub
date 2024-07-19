@@ -13,14 +13,18 @@ build:
 
 dev *args: (dev-watch-server args)
 
-dev-watch-server *args:
+dev-watch package *args:
     RUSTFLAGS='{{rustflags}}' \
     cargo watch \
         --clear \
         --quiet \
         --watch './crates' \
         --ignore 'crates/app-migration/**/*' \
-        --exec 'run --target "{{rust_target}}" --package "downloader-hub" -- {{args}}' \
+        --exec 'run --target "{{rust_target}}" --package "{{package}}" -- {{args}}' \
+
+dev-watch-server *args: (dev-watch 'downloader-hub' args)
+
+dev-watch-cli *args: (dev-watch 'downloader-cli' args)
 
 dev-run package *args:
     RUSTFLAGS='{{rustflags}}' \
