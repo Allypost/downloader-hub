@@ -40,3 +40,11 @@ cognitive_complexity = "allow"
 strip = true
 # opt-level = "s"
 lto = "thin"
+# panic = "abort"
+codegen-units = 1
+
+[profile.release-cli]
+inherits = "release"
+opt-level = "s"
+lto = true
+panic = "abort"
