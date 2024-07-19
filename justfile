@@ -66,3 +66,10 @@ lint-fix:
 
 fmt: lint-fix
     cargo fmt --all \
+
+install-cli:
+    RUSTFLAGS='{{rustflags}}' \
+    cargo install \
+        --path=./crates/downloader-cli \
+        --profile=release-cli \
+        --target='{{rust_target}}' \
