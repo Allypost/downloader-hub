@@ -11,11 +11,11 @@ use app_config::Config;
 use app_helpers::{
     ffprobe::{self, FfProbeResult, Stream},
     id::time_thread_id,
+    temp_dir::TempDir,
     trash::move_to_trash,
 };
 use app_logger::{debug, error, trace};
 use image::ColorType;
-use scopeguard::defer;
 use thiserror::Error;
 
 use crate::{error::FixerError, util::transferable_file_times, FixerReturn, IntoFixerReturn};
@@ -117,13 +117,14 @@ impl TranscodeInfo {
 fn transcode_media_into(from_path: &Path, to_format: &TranscodeInfo) -> anyhow::Result<PathBuf> {
     let to_extension = to_format.extension;
 
-    let (cache_folder, cache_from_path) = copy_file_to_cache_folder(from_path)?;
-    defer! {
-        trace!("Deleting {path:?}", path = cache_folder);
-        if let Err(e) = fs::remove_dir_all(&cache_folder) {
-            debug!("Failed to delete {cache_folder:?}: {e:?}");
-        }
-    }
+    let cache_folder = TempDir::absolute(
+        Config::global()
+            .get_cache_dir()
+            .join(format!("transcode-{}", time_thread_id())),
+    )
+    .map_err(|e| anyhow!("Failed to create temporary directory: {e:?}"))?;
+
+    let cache_from_path = copy_file_to_cache_folder(cache_folder.path(), from_path)?;
 
     let cache_to_path = {
         let path = cache_from_path.with_extension(to_extension);
@@ -225,18 +226,7 @@ fn transcode_media_into(from_path: &Path, to_format: &TranscodeInfo) -> anyhow::
     }
 }
 
-fn copy_file_to_cache_folder(file_path: &Path) -> anyhow::Result<(PathBuf, PathBuf)> {
-    let id = time_thread_id();
-
-    let cache_folder = Config::global()
-        .get_cache_dir()
-        .join(format!("transcode-{}", id));
-
-    if !cache_folder.exists() {
-        trace!("Creating {path:?}", path = cache_folder);
-        fs::create_dir_all(&cache_folder)
-            .map_err(|e| anyhow!("Failed to create {path:?}: {e:?}", path = cache_folder))?;
-    }
+fn copy_file_to_cache_folder(cache_folder: &Path, file_path: &Path) -> anyhow::Result<PathBuf> {
     trace!("Using {path:?} as cache folder", path = cache_folder);
 
     let cache_file_path = {
@@ -260,7 +250,7 @@ fn copy_file_to_cache_folder(file_path: &Path) -> anyhow::Result<(PathBuf, PathB
         )
     })?;
 
-    Ok((cache_folder, cache_file_path))
+    Ok(cache_file_path)
 }
 
 fn path_has_extension(path: &Path, wanted_extension: &str) -> bool {

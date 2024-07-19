@@ -16,7 +16,6 @@ infer = "0.16.0"
 app-logger.workspace = true
 rayon = "1.10.0"
 resolve-path = "0.1.0"
-scopeguard = "1.2.0"
 thiserror.workspace = true
 anyhow.workspace = true
 tokio.workspace = true

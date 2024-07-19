@@ -1,7 +1,7 @@
 use std::{ops::Sub, path::PathBuf, process};
 
 use app_config::Config;
-use app_helpers::id::time_id;
+use app_helpers::{id::time_id, temp_dir::TempDir};
 use app_logger::{debug, trace};
 
 use super::{DownloadFileRequest, DownloadResult, Downloader, ResolvedDownloadFileRequest};
@@ -43,7 +43,10 @@ impl YtDlpDownloader {
     ) -> Result<DownloadResult, String> {
         let yt_dlp = Config::global().dependency_paths.yt_dlp_path();
         trace!("`yt-dlp' binary: {:?}", &yt_dlp);
-        let output_template = get_output_template(&request_info.download_dir);
+        let temp_dir = TempDir::in_tmp_with_prefix("downloader-hub_yt-dlp-")
+            .map_err(|e| format!("Failed to create temporary directory for yt-dlp: {e:?}"))?;
+        let output_template = get_output_template(temp_dir.path());
+
         debug!("template: {:?}", &output_template);
         let mut cmd = process::Command::new(yt_dlp);
         let cmd = cmd
@@ -105,9 +108,17 @@ impl YtDlpDownloader {
             return Err("yt-dlp finished but file does not exist.".to_string());
         }
 
+        let final_file_path = request_info
+            .download_dir
+            .join(new_file_path.file_name().unwrap_or_default());
+
+        std::fs::copy(&new_file_path, &final_file_path).map_err(|e| {
+            format!("Failed to copy file from {new_file_path:?} to {final_file_path:?}: {e:?}")
+        })?;
+
         Ok(DownloadResult {
             request: request_info.clone(),
-            path: new_file_path,
+            path: final_file_path,
         })
     }
 }

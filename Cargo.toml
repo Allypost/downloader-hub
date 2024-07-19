@@ -20,7 +20,7 @@ once_cell = { version = "1.19.0", features = ["parking_lot"] }
 serde = { version = "1.0", features = ["derive", "alloc"] }
 serde_json = { version = "1.0" }
 thiserror = "1.0"
-tokio = { version = "1.38.0", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1.38.0", features = ["rt-multi-thread", "macros", "fs"] }
 tracing = { version = "0.1.40" }
 
 [workspace.lints.clippy]

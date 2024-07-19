@@ -1,5 +1,3 @@
-extern crate scopeguard;
-
 use std::path::{Path, PathBuf};
 
 use error::FixerError;

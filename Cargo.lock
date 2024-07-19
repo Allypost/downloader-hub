@@ -227,7 +227,6 @@ dependencies = [
  "once_cell",
  "rayon",
  "resolve-path",
- "scopeguard",
  "thiserror",
  "tokio",
 ]
