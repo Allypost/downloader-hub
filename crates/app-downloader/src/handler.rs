@@ -50,11 +50,11 @@ pub static DEFAULT_DOWNLOAD_HANDLERS: Lazy<Vec<DownloadHandler>> = Lazy::new(|| 
         DownloadHandler::new(InstagramDownloader::is_post_url, InstagramDownloader),
         DownloadHandler::new(TwitterDownloader::is_post_url, TwitterDownloader),
         DownloadHandler::new(TwitterDownloader::is_media_url, GenericDownloader),
-        DownloadHandler::new(MastodonDownloader::is_mastodon_toot, MastodonDownloader),
         DownloadHandler::new(TumblrDownloader::is_post_url, TumblrDownloader),
         DownloadHandler::new(RedditDownloader::is_media_url, RedditDownloader),
         DownloadHandler::new(ImgurDownloader::is_media_url, ImgurDownloader),
         DownloadHandler::new(ImgurDownloader::is_post_url, ImgurDownloader),
+        DownloadHandler::new(MastodonDownloader::is_mastodon_toot, MastodonDownloader),
         DownloadHandler::new(|_| true, YtDlpDownloader),
     ]
 });

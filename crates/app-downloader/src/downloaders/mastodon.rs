@@ -3,9 +3,12 @@ use std::time::Duration;
 use app_logger::{debug, trace, warn};
 use once_cell::sync::Lazy;
 use regex::Regex;
+use serde::Deserialize;
+use url::Url;
 
 use super::{
-    twitter::TwitterDownloader, DownloadFileRequest, Downloader, ResolvedDownloadFileRequest,
+    generic::GenericDownloader, twitter::TwitterDownloader, DownloadFileRequest, Downloader,
+    ResolvedDownloadFileRequest,
 };
 use crate::{common::request::Client, DownloaderReturn};
 
@@ -25,70 +28,81 @@ impl Downloader for MastodonDownloader {
         &self,
         req: &DownloadFileRequest,
     ) -> Result<ResolvedDownloadFileRequest, String> {
-        TwitterDownloader.get_resolved(req)
+        let info = Self::get_mastodon_info(&req.original_url)?;
+
+        trace!(?info, "Got mastodon info");
+
+        let screenshot_url = TwitterDownloader.screenshot_tweet_url(&info.url);
+
+        trace!(?screenshot_url, "Downloading screenshot from url");
+
+        Ok(ResolvedDownloadFileRequest {
+            request_info: req.clone(),
+            resolved_urls: vec![screenshot_url],
+        })
     }
 
     fn download_resolved(&self, resolved: &ResolvedDownloadFileRequest) -> DownloaderReturn {
-        TwitterDownloader.download_resolved(resolved)
+        GenericDownloader.download_resolved(resolved)
     }
 }
 
+#[derive(Debug, Deserialize)]
+pub struct MastodonAccount {
+    pub id: String,
+    pub username: String,
+    pub acct: String,
+    pub display_name: String,
+    pub url: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct TootInfo {
+    pub id: String,
+    pub url: String,
+    pub account: MastodonAccount,
+}
+
 impl MastodonDownloader {
-    pub fn is_mastodon_toot(toot_url: &str) -> bool {
-        trace!("Checking whether {toot_url:?} is a Mastodon toot");
-        let toot_url = toot_url.trim_end_matches('/');
-        let Some(toot_id) = toot_url.split('/').last() else {
-            return false;
+    #[app_logger::instrument]
+    pub fn get_mastodon_info(toot_url: &str) -> Result<TootInfo, String> {
+        trace!("Getting mastodon info");
+
+        let url_parsed = Url::parse(toot_url).map_err(|e| format!("Invalid URL: {e}"))?;
+
+        let toot_id = {
+            let path = url_parsed.path().trim_end_matches('/');
+
+            path.split('/')
+                .last()
+                .ok_or_else(|| format!("Failed to get ID from toot URL: {toot_url:?}"))?
         };
 
-        if !IS_NUMBERS_ONLY.is_match(toot_id) {
-            return false;
-        }
+        trace!(?toot_id, "Extracted ID from URL");
 
-        let Ok(toot_url) = url::Url::parse(toot_url) else {
-            return false;
-        };
+        let mastodon_host = url_parsed
+            .host_str()
+            .ok_or_else(|| format!("Failed to get host from toot URL: {toot_url:?}"))?;
 
-        let Some(mastodon_host) = toot_url.host() else {
-            return false;
-        };
+        let mastodon_api_url = format!("https://{mastodon_host}/api/v1/statuses/{toot_id}");
 
-        let api_url = format!("https://{mastodon_host}/api/v1/statuses/{toot_id}");
+        debug!(url = ?mastodon_api_url, "Making request to instance for toot info");
 
-        trace!("Making request to instance {mastodon_host:?} for status info for {toot_id:?}");
-
-        let client = match Client::base() {
-            Ok(client) => client,
-            Err(e) => {
-                warn!("Failed to create client: {e:?}");
-                return false;
-            }
-        };
-
-        let result = client
-            .get(api_url)
+        let resp = Client::base()?
+            .get(mastodon_api_url)
             .timeout(Duration::from_secs(5))
             .send()
-            .map_err(|e| format!("Failed to send request to instagram API: {e:?}"))
-            .and_then(|x| {
-                x.text()
-                    .map_err(|e| format!("Failed to parse response from instagram API: {e:?}"))
-            })
-            .and_then(|res_text| {
-                serde_json::from_str::<serde_json::Value>(&res_text)
-                    .map_err(|e| format!("Failed to parse response from instagram API: {e:?}"))
-            });
+            .map_err(|e| format!("Failed to send request to mastodon API: {e:?}"))?;
 
-        match result {
-            Ok(result) => {
-                trace!("Got OK result from api request: {result:?}");
-                true
-            }
-            Err(e) => {
-                debug!("Got error from API check: {e:?}");
-                false
-            }
-        }
+        trace!(?resp, "Finished api request");
+
+        resp.json::<TootInfo>()
+            .map_err(|e| format!("Failed to parse response from mastodon API: {e:?}"))
+    }
+
+    #[must_use]
+    pub fn is_mastodon_toot(maybe_toot_url: &str) -> bool {
+        Self::get_mastodon_info(maybe_toot_url).is_ok()
     }
 }
 

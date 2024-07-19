@@ -66,11 +66,7 @@ impl Downloader for TwitterDownloader {
 
         // the `i` "username" is for media links, not direct link to tweet
         if tweet_info.username != "i" {
-            let tweet_screenshot_url = {
-                let endpoint = &Config::global().endpoint.twitter_screenshot_base_url;
-
-                format!("{}/{}", endpoint.trim_end_matches('/'), req.original_url)
-            };
+            let tweet_screenshot_url = self.screenshot_tweet_url(&req.original_url);
 
             trace!("Adding Tweet screenshot URL: {:?}", &tweet_screenshot_url);
             tweet_media.push(TweetMedia::Photo {
@@ -121,6 +117,13 @@ impl TwitterDownloader {
         )
     }
 
+    #[must_use]
+    pub fn screenshot_tweet_url(&self, url: &str) -> String {
+        let endpoint = &Config::global().endpoint.twitter_screenshot_base_url;
+
+        format!("{}/{}", endpoint.trim_end_matches('/'), url)
+    }
+
     pub fn screenshot_tweet(
         &self,
         download_dir: &Path,
@@ -128,8 +131,7 @@ impl TwitterDownloader {
     ) -> Result<DownloadResult, DownloaderError> {
         debug!(?url, "Trying to screenshot tweet");
 
-        let endpoint = &Config::global().endpoint.twitter_screenshot_base_url;
-        let tweet_screenshot_url = format!("{}/{}", endpoint.trim_end_matches('/'), url);
+        let tweet_screenshot_url = self.screenshot_tweet_url(url);
 
         trace!(url = ?tweet_screenshot_url, "Tweet screenshot URL");
 
