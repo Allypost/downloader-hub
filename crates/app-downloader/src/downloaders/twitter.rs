@@ -56,6 +56,11 @@ impl Downloader for TwitterDownloader {
 
         trace!(?tweet_info, "Got tweet info");
 
+        if tweet_info.username == "i" {
+            trace!("Tweet is a media link, not a tweet link. Letting yt-dlp handle it");
+            return YtDlpDownloader.get_resolved(req);
+        }
+
         let tweet_data = get_tweet_data(&tweet_info.status_id)?;
 
         trace!(?tweet_data, "Got tweet data");
