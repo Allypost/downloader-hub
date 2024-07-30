@@ -49,7 +49,7 @@ pub async fn add_user_to_request(
     AuthorizationSchema::authorize_from_value(&auth_key)
         .await
         .map(|user| {
-            tracing::Span::current().record("user", &tracing::field::debug(&user.id));
+            tracing::Span::current().record("user", tracing::field::debug(&user.id));
             app_logger::trace!("Added user to request");
             req.extensions_mut().insert(user.clone());
 
