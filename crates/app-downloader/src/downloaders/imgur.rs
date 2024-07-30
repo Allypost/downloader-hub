@@ -4,7 +4,8 @@ use reqwest::blocking::Response;
 use serde::Deserialize;
 
 use super::{
-    generic::GenericDownloader, DownloadFileRequest, Downloader, ResolvedDownloadFileRequest,
+    generic::GenericDownloader, DownloadFileRequest, DownloadUrlInfo, Downloader,
+    ResolvedDownloadFileRequest,
 };
 use crate::{common::request::Client, DownloaderReturn};
 
@@ -35,7 +36,7 @@ impl Downloader for ImgurDownloader {
         let urls = post_data
             .media
             .into_iter()
-            .map(|x| x.url)
+            .map(|x| DownloadUrlInfo::from_url(&x.url))
             .collect::<Vec<_>>();
 
         Ok(ResolvedDownloadFileRequest {

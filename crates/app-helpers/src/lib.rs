@@ -5,4 +5,5 @@ pub mod futures;
 pub mod id;
 pub mod results;
 pub mod temp_dir;
+pub mod temp_file;
 pub mod trash;

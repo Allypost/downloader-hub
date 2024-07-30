@@ -5,7 +5,7 @@ use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use unicode_segmentation::UnicodeSegmentation;
 use url::Url;
 
-use super::{Downloader, ResolvedDownloadFileRequest};
+use super::{DownloadUrlInfo, Downloader, ResolvedDownloadFileRequest};
 use crate::{common::request::Client, DownloadFileRequest, DownloadResult, DownloaderReturn};
 
 pub const MAX_FILENAME_LENGTH: usize = 120;
@@ -24,7 +24,7 @@ impl Downloader for GenericDownloader {
         req: &DownloadFileRequest,
     ) -> Result<ResolvedDownloadFileRequest, String> {
         Ok(ResolvedDownloadFileRequest {
-            resolved_urls: vec![req.original_url.clone()],
+            resolved_urls: vec![DownloadUrlInfo::from_url(&req.original_url)],
             request_info: req.clone(),
         })
     }
@@ -42,11 +42,12 @@ impl GenericDownloader {
     pub fn download_one(
         &self,
         request_info: &DownloadFileRequest,
-        url: &str,
+        url: &DownloadUrlInfo,
     ) -> Result<DownloadResult, String> {
         app_logger::info!(?url, dir = ?request_info.download_dir, "Downloading with generic downloader");
 
-        let mut res = Client::from_download_request(request_info, url)?
+        let mut res = Client::from_download_request_and_url(request_info, url)?
+            .headers(url.headers().clone())
             .send()
             .map_err(|e| format!("Failed to send request: {:?}", e))?
             .error_for_status()
@@ -69,7 +70,7 @@ impl GenericDownloader {
 
         let taken_filename_len = id.len() + 1 + extension.len();
 
-        let url_file_name = Url::parse(url)
+        let url_file_name = Url::parse(url.url())
             .ok()
             .map(|x| PathBuf::from(x.path()))
             .and_then(|x| {
@@ -119,6 +120,9 @@ pub fn download(request: &DownloadFileRequest) -> DownloaderReturn {
     GenericDownloader.download(request)
 }
 
-pub fn download_one(request: &DownloadFileRequest, url: &str) -> Result<DownloadResult, String> {
+pub fn download_one(
+    request: &DownloadFileRequest,
+    url: &DownloadUrlInfo,
+) -> Result<DownloadResult, String> {
     GenericDownloader.download_one(request, url)
 }

@@ -13,7 +13,7 @@ use super::{
     generic::GenericDownloader, yt_dlp::YtDlpDownloader, DownloadFileRequest, DownloadResult,
     Downloader, DownloaderError, ResolvedDownloadFileRequest,
 };
-use crate::{common::request::Client, DownloaderReturn};
+use crate::{common::request::Client, downloaders::DownloadUrlInfo, DownloaderReturn};
 
 pub static URL_MATCH: Lazy<Regex> = Lazy::new(|| {
     Regex::new(
@@ -79,10 +79,7 @@ impl Downloader for TwitterDownloader {
             });
         }
 
-        let resolved_urls = tweet_media
-            .into_iter()
-            .map(|x| x.as_url().to_string())
-            .collect();
+        let resolved_urls = tweet_media.into_iter().map(|x| x.as_url().into()).collect();
 
         Ok(ResolvedDownloadFileRequest {
             request_info: req.clone(),
@@ -118,7 +115,7 @@ impl TwitterDownloader {
 
         GenericDownloader.download_one(
             &DownloadFileRequest::new(twitter_media_url, download_dir),
-            &url_without_name,
+            &DownloadUrlInfo::from_url(&url_without_name),
         )
     }
 
@@ -142,7 +139,7 @@ impl TwitterDownloader {
 
         GenericDownloader.download_one(
             &DownloadFileRequest::new(url, download_dir),
-            &tweet_screenshot_url,
+            &DownloadUrlInfo::from_url(&tweet_screenshot_url),
         )
     }
 

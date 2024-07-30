@@ -6,7 +6,8 @@ use regex::Regex;
 use serde::Deserialize;
 
 use super::{
-    generic::GenericDownloader, DownloadFileRequest, Downloader, ResolvedDownloadFileRequest,
+    generic::GenericDownloader, DownloadFileRequest, DownloadUrlInfo, Downloader,
+    ResolvedDownloadFileRequest,
 };
 use crate::{common::request::Client, DownloaderReturn};
 
@@ -32,7 +33,10 @@ impl Downloader for InstagramDownloader {
 
         Ok(ResolvedDownloadFileRequest {
             request_info: req.clone(),
-            resolved_urls: media_urls,
+            resolved_urls: media_urls
+                .into_iter()
+                .map(|x| DownloadUrlInfo::from_url(&x))
+                .collect(),
         })
     }
 

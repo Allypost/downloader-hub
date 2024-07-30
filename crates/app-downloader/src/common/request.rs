@@ -6,7 +6,7 @@ use reqwest::blocking::{
 };
 
 use super::USER_AGENT;
-use crate::downloaders::DownloadFileRequest;
+use crate::downloaders::{DownloadFileRequest, DownloadUrlInfo};
 
 pub struct Client;
 
@@ -17,19 +17,29 @@ impl Client {
             .map_err(|e| format!("Failed to create client: {:?}", e))
     }
 
+    pub fn from_download_request_and_url(
+        req: &DownloadFileRequest,
+        url: &DownloadUrlInfo,
+    ) -> Result<ReqwestRequestBuilder, String> {
+        let mut builder = Self::base()?
+            .request(
+                req.method.as_str().parse().expect("Failed to parse method"),
+                url.url(),
+            )
+            .timeout(Duration::from_secs(5));
+
+        for (k, v) in &req.headers {
+            builder = builder.header(k, v);
+        }
+
+        Ok(builder)
+    }
+
     pub fn from_download_request(
         req: &DownloadFileRequest,
         url: &str,
     ) -> Result<ReqwestRequestBuilder, String> {
-        let builder = Self::base()?
-            .request(
-                req.method.as_str().parse().expect("Failed to parse method"),
-                url,
-            )
-            // .headers(req.headers)
-            .timeout(Duration::from_secs(5));
-
-        Ok(builder)
+        Self::from_download_request_and_url(req, &DownloadUrlInfo::from_url(url))
     }
 
     pub fn builder() -> ReqwestClientBuilder {

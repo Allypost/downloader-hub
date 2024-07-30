@@ -1,10 +1,20 @@
-use std::{ops::Sub, path::PathBuf, process};
+use std::{
+    io::Write,
+    ops::Sub,
+    path::PathBuf,
+    process,
+    time::{Duration, SystemTime},
+};
 
 use app_config::Config;
 use app_helpers::{id::time_id, temp_dir::TempDir};
 use app_logger::{debug, trace};
+use http::header;
+use url::Url;
 
-use super::{DownloadFileRequest, DownloadResult, Downloader, ResolvedDownloadFileRequest};
+use super::{
+    DownloadFileRequest, DownloadResult, DownloadUrlInfo, Downloader, ResolvedDownloadFileRequest,
+};
 use crate::{common::USER_AGENT, downloaders::generic, DownloaderReturn};
 
 #[derive(Debug, Default)]
@@ -22,7 +32,7 @@ impl Downloader for YtDlpDownloader {
     ) -> Result<ResolvedDownloadFileRequest, String> {
         Ok(ResolvedDownloadFileRequest {
             request_info: req.clone(),
-            resolved_urls: vec![req.original_url.clone()],
+            resolved_urls: vec![DownloadUrlInfo::from_url(&req.original_url)],
         })
     }
 
@@ -36,16 +46,65 @@ impl Downloader for YtDlpDownloader {
 }
 
 impl YtDlpDownloader {
+    #[allow(clippy::too_many_lines)]
     pub fn download_one(
         &self,
         request_info: &DownloadFileRequest,
-        url: &str,
+        url: &DownloadUrlInfo,
     ) -> Result<DownloadResult, String> {
         let yt_dlp = Config::global().dependency_paths.yt_dlp_path();
         trace!("`yt-dlp' binary: {:?}", &yt_dlp);
         let temp_dir = TempDir::in_tmp_with_prefix("downloader-hub_yt-dlp-")
             .map_err(|e| format!("Failed to create temporary directory for yt-dlp: {e:?}"))?;
         let output_template = get_output_template(temp_dir.path());
+
+        let parsed_url = Url::parse(url.url()).expect("Failed to parse URL");
+        let host_str = parsed_url.host_str().unwrap_or_default();
+        let in_a_year = SystemTime::now()
+            .checked_add(Duration::from_secs(60 * 60 * 24 * 365))
+            .unwrap_or_else(SystemTime::now)
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap_or_else(|_| Duration::from_secs(0))
+            .as_secs();
+
+        let cookie_values = url
+            .headers()
+            .get_all(header::COOKIE)
+            .into_iter()
+            .flat_map(|x| x.to_str())
+            .flat_map(|x| {
+                x.split("; ")
+                    .map(|x| x.splitn(2, '=').collect::<Vec<&str>>())
+                    .filter(|x| x.len() == 2)
+                    .map(|x| (x[0], x[1]))
+                    .map(|(k, v)| {
+                        format!(
+                            "{host}\tFALSE\t/\tTRUE\t{expires}\t{k}\t{v}",
+                            host = host_str,
+                            expires = in_a_year,
+                        )
+                    })
+            })
+            .collect::<Vec<String>>();
+
+        let mut cookie_file = app_helpers::temp_file::TempFile::with_prefix("cookie-headers-")
+            .map_err(|e| {
+                format!("Failed to create temporary file for yt-dlp cookie headers: {e:?}")
+            })?;
+
+        if !cookie_values.is_empty() {
+            debug!("Adding cookie headers: {:?}", &cookie_values);
+            cookie_file
+                .file_mut()
+                .write_all(
+                    format!(
+                        "# Netscape HTTP Cookie File\n{cookie_values}\n",
+                        cookie_values = cookie_values.join("\n")
+                    )
+                    .as_bytes(),
+                )
+                .map_err(|e| format!("Failed to write cookie headers to file: {e:?}"))?;
+        }
 
         debug!("template: {:?}", &output_template);
         let mut cmd = process::Command::new(yt_dlp);
@@ -55,10 +114,24 @@ impl YtDlpDownloader {
             .arg("--no-part")
             .arg("--no-mtime")
             .arg("--no-embed-metadata")
+            .arg("--no-config")
+            .arg("--cookies")
+            .arg(cookie_file.path())
             .args([
                 "--trim-filenames",
                 generic::MAX_FILENAME_LENGTH.sub(5).to_string().as_str(),
             ])
+            .args(
+                url.headers()
+                    .iter()
+                    .filter(|x| x.0 != header::COOKIE)
+                    .flat_map(|(k, v)| {
+                        vec![
+                            "--add-header".to_string(),
+                            format!("{k}:{v}", k = k, v = v.to_str().unwrap_or_default()),
+                        ]
+                    }),
+            )
             .args([
                 "--output",
                 output_template
@@ -68,7 +141,7 @@ impl YtDlpDownloader {
             .args(["--user-agent", USER_AGENT])
             .args(["--no-simulate", "--print", "after_move:filepath"])
             // .arg("--verbose")
-            .arg(url);
+            .arg(url.url());
         debug!("Running cmd: {:?}", &cmd);
         let cmd_output = cmd.output();
         trace!("Cmd output: {:?}", &cmd_output);

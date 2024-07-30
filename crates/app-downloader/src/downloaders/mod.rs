@@ -3,7 +3,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use http::{header::HeaderMap, Method};
+use http::{
+    header::{HeaderMap, IntoHeaderName},
+    HeaderValue, Method,
+};
 use serde::{Deserialize, Serialize};
 
 pub mod generic;
@@ -68,7 +71,65 @@ const fn default_get() -> Method {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResolvedDownloadFileRequest {
     pub request_info: DownloadFileRequest,
-    pub resolved_urls: Vec<String>,
+    pub resolved_urls: Vec<DownloadUrlInfo>,
+}
+
+pub type ResolvedUrlHeaders = HeaderMap;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DownloadUrlInfo {
+    url: String,
+    #[serde(with = "http_serde::header_map", default)]
+    headers: ResolvedUrlHeaders,
+}
+impl DownloadUrlInfo {
+    #[must_use]
+    pub fn from_url(url: &str) -> Self {
+        Self {
+            url: url.to_string(),
+            headers: HeaderMap::default(),
+        }
+    }
+
+    #[must_use]
+    pub fn with_headers(mut self, headers: ResolvedUrlHeaders) -> Self {
+        self.headers = headers;
+        self
+    }
+
+    #[must_use]
+    pub fn with_header<K, V>(mut self, key: K, value: &V) -> Self
+    where
+        K: IntoHeaderName,
+        V: ToString,
+    {
+        let value = value.to_string();
+        if let Ok(value) = HeaderValue::from_str(&value) {
+            self.headers.append(key, value);
+        }
+        self
+    }
+
+    #[must_use]
+    pub fn url(&self) -> &str {
+        &self.url
+    }
+
+    #[must_use]
+    pub const fn headers(&self) -> &ResolvedUrlHeaders {
+        &self.headers
+    }
+}
+
+impl From<&str> for DownloadUrlInfo {
+    fn from(url: &str) -> Self {
+        Self::from_url(url)
+    }
+}
+impl From<String> for DownloadUrlInfo {
+    fn from(url: String) -> Self {
+        Self::from_url(&url)
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

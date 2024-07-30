@@ -114,14 +114,12 @@ pub enum FfProbeError {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "__internal_deny_unknown_fields", serde(deny_unknown_fields))]
 pub struct FfProbeResult {
     pub streams: Vec<Stream>,
     pub format: Format,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "__internal_deny_unknown_fields", serde(deny_unknown_fields))]
 pub struct Stream {
     pub index: i64,
     pub codec_name: Option<String>,
@@ -176,7 +174,6 @@ pub struct Stream {
     pub side_data_list: Vec<SideData>,
 }
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "__internal_deny_unknown_fields", serde(deny_unknown_fields))]
 // Allowed to prevent having to break compatibility of float fields are added.
 #[allow(clippy::derive_partial_eq_without_eq)]
 pub struct SideData {
@@ -184,7 +181,6 @@ pub struct SideData {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "__internal_deny_unknown_fields", serde(deny_unknown_fields))]
 // Allowed to prevent having to break compatibility of float fields are added.
 #[allow(clippy::derive_partial_eq_without_eq)]
 pub struct Disposition {
@@ -203,7 +199,6 @@ pub struct Disposition {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "__internal_deny_unknown_fields", serde(deny_unknown_fields))]
 // Allowed to prevent having to break compatibility of float fields are added.
 #[allow(clippy::derive_partial_eq_without_eq)]
 pub struct StreamTags {
@@ -216,7 +211,6 @@ pub struct StreamTags {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "__internal_deny_unknown_fields", serde(deny_unknown_fields))]
 pub struct Format {
     pub filename: String,
     pub nb_streams: i64,
@@ -254,7 +248,6 @@ impl Format {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "__internal_deny_unknown_fields", serde(deny_unknown_fields))]
 #[allow(clippy::derive_partial_eq_without_eq)]
 pub struct FormatTags {
     #[serde(rename = "WMFSDKNeeded")]
