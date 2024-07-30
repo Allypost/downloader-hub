@@ -14,6 +14,7 @@ pub mod imgur;
 pub mod instagram;
 pub mod mastodon;
 pub mod reddit;
+pub mod tiktok;
 pub mod tumblr;
 pub mod twitter;
 pub mod yt_dlp;
