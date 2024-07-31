@@ -7,7 +7,7 @@ use std::{
 };
 
 use app_config::Config;
-use app_helpers::{id::time_id, temp_dir::TempDir};
+use app_helpers::{id::time_id, temp_dir::TempDir, temp_file::TempFile};
 use app_logger::{debug, trace};
 use http::header;
 use url::Url;
@@ -76,7 +76,7 @@ impl YtDlpDownloader {
                 x.split("; ")
                     .map(|x| x.splitn(2, '=').collect::<Vec<&str>>())
                     .filter(|x| x.len() == 2)
-                    .map(|x| (x[0], x[1]))
+                    .map(|x| (x[0].trim(), x[1].trim()))
                     .map(|(k, v)| {
                         format!(
                             "{host}\tFALSE\t/\tTRUE\t{expires}\t{k}\t{v}",
@@ -87,61 +87,67 @@ impl YtDlpDownloader {
             })
             .collect::<Vec<String>>();
 
-        let mut cookie_file = app_helpers::temp_file::TempFile::with_prefix("cookie-headers-")
-            .map_err(|e| {
-                format!("Failed to create temporary file for yt-dlp cookie headers: {e:?}")
-            })?;
-
-        if !cookie_values.is_empty() {
-            debug!("Adding cookie headers: {:?}", &cookie_values);
-            cookie_file
-                .file_mut()
-                .write_all(
-                    format!(
-                        "# Netscape HTTP Cookie File\n{cookie_values}\n",
-                        cookie_values = cookie_values.join("\n")
-                    )
-                    .as_bytes(),
-                )
-                .map_err(|e| format!("Failed to write cookie headers to file: {e:?}"))?;
-        }
-
         debug!("template: {:?}", &output_template);
         let mut cmd = process::Command::new(yt_dlp);
-        let cmd = cmd
-            .arg("--no-check-certificate")
-            .args(["--socket-timeout", "120"])
-            .arg("--no-part")
-            .arg("--no-mtime")
-            .arg("--no-embed-metadata")
-            .arg("--no-config")
-            .arg("--cookies")
-            .arg(cookie_file.path())
-            .args([
-                "--trim-filenames",
-                generic::MAX_FILENAME_LENGTH.sub(5).to_string().as_str(),
-            ])
-            .args(
-                url.headers()
-                    .iter()
-                    .filter(|x| x.0 != header::COOKIE)
-                    .flat_map(|(k, v)| {
-                        vec![
-                            "--add-header".to_string(),
-                            format!("{k}:{v}", k = k, v = v.to_str().unwrap_or_default()),
-                        ]
-                    }),
-            )
-            .args([
-                "--output",
-                output_template
-                    .to_str()
-                    .ok_or_else(|| "Failed to convert path to string".to_string())?,
-            ])
-            .args(["--user-agent", USER_AGENT])
-            .args(["--no-simulate", "--print", "after_move:filepath"])
-            // .arg("--verbose")
-            .arg(url.url());
+        let cmd = {
+            let mut cmd = cmd
+                .arg("--no-check-certificate")
+                .args(["--socket-timeout", "120"])
+                .arg("--no-part")
+                .arg("--no-mtime")
+                .arg("--no-embed-metadata")
+                .arg("--no-config");
+
+            if !cookie_values.is_empty() {
+                debug!("Adding cookie headers: {:?}", &cookie_values);
+
+                let mut cookie_file = TempFile::with_prefix("cookie-headers-").map_err(|e| {
+                    format!("Failed to create temporary file for yt-dlp cookie headers: {e:?}")
+                })?;
+
+                cookie_file
+                    .file_mut()
+                    .write_all(
+                        format!(
+                            "# Netscape HTTP Cookie File\n{cookie_values}\n",
+                            cookie_values = cookie_values.join("\n")
+                        )
+                        .as_bytes(),
+                    )
+                    .map_err(|e| format!("Failed to write cookie headers to file: {e:?}"))?;
+
+                cmd = cmd.arg("--cookies").arg(cookie_file.path());
+            }
+
+            cmd = cmd
+                .args([
+                    "--trim-filenames",
+                    generic::MAX_FILENAME_LENGTH.sub(5).to_string().as_str(),
+                ])
+                .args(
+                    url.headers()
+                        .iter()
+                        .filter(|x| x.0 != header::COOKIE)
+                        .flat_map(|(k, v)| {
+                            vec![
+                                "--add-header".to_string(),
+                                format!("{k}:{v}", k = k, v = v.to_str().unwrap_or_default()),
+                            ]
+                        }),
+                )
+                .args([
+                    "--output",
+                    output_template
+                        .to_str()
+                        .ok_or_else(|| "Failed to convert path to string".to_string())?,
+                ])
+                .args(["--user-agent", USER_AGENT])
+                .args(["--no-simulate", "--print", "after_move:filepath"])
+                // .arg("--verbose")
+                .arg(url.url());
+
+            cmd
+        };
         debug!("Running cmd: {:?}", &cmd);
         let cmd_output = cmd.output();
         trace!("Cmd output: {:?}", &cmd_output);
@@ -156,12 +162,12 @@ impl YtDlpDownloader {
                     .map_err(|e| format!("Failed to convert output to UTF-8: {e:?}"))?;
                 let output_path = PathBuf::from(output.trim());
 
-                if output_path.exists() {
-                    debug!("yt-dlp successful download to file: {:?}", output_path);
-                    Ok(output_path)
-                } else {
-                    Err("yt-dlp finished but file does not exist.")
+                if !output_path.exists() {
+                    return Err("yt-dlp finished but file does not exist.".to_string());
                 }
+
+                debug!("yt-dlp successful download to file: {:?}", output_path);
+                output_path
             }
             Ok(process::Output {
                 stdout: _,
@@ -173,9 +179,9 @@ impl YtDlpDownloader {
             _ => {
                 let msg = format!("yt-dlp failed downloading meme: {cmd_output:?}");
                 err.push_str(msg.as_str());
-                Err(err.as_str())
+                return Err(err.as_str().to_string());
             }
-        }?;
+        };
 
         if !new_file_path.exists() {
             return Err("yt-dlp finished but file does not exist.".to_string());
