@@ -22,5 +22,8 @@ pub struct CliArgs {
     pub run: common::RunConfig,
 
     #[command(flatten)]
+    pub task: common::TaskConfig,
+
+    #[command(flatten)]
     pub conditional: conditional::ConditionalConfig,
 }

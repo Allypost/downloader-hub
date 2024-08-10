@@ -15,6 +15,7 @@ app-fixers.workspace = true
 app-helpers.workspace = true
 app-logger.workspace = true
 app-migration = { version = "*", path = "../app-migration" }
+app-tasks.workspace = true
 app-validators = { version = "*", path = "../app-validators" }
 axum = { version = "0.7.5", features = ["macros", "multipart"] }
 axum-extra = { version = "0.9.3", features = [

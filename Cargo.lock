@@ -271,6 +271,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "app-tasks"
+version = "0.5.0"
+dependencies = [
+ "anyhow",
+ "app-config",
+ "app-logger",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "app-validators"
 version = "0.5.0"
 dependencies = [
@@ -1368,6 +1379,7 @@ dependencies = [
  "app-helpers",
  "app-logger",
  "app-migration",
+ "app-tasks",
  "app-validators",
  "axum",
  "axum-extra",
@@ -1402,6 +1414,7 @@ dependencies = [
  "app-fixers",
  "app-helpers",
  "app-logger",
+ "app-tasks",
  "async-trait",
  "chrono",
  "deadqueue",
@@ -4040,6 +4053,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "signal-hook-registry"
+version = "1.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a9e9e0b4211b72e7b8b6e85c807d36c212bdb33ea8587f7569562a84df5465b1"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "signature"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4683,6 +4705,7 @@ dependencies = [
  "libc",
  "mio",
  "pin-project-lite",
+ "signal-hook-registry",
  "socket2 0.5.7",
  "tokio-macros",
  "windows-sys 0.52.0",

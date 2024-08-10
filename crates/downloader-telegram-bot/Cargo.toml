@@ -13,6 +13,7 @@ app-downloader.workspace = true
 app-fixers.workspace = true
 app-helpers.workspace = true
 app-logger.workspace = true
+app-tasks.workspace = true
 async-trait.workspace = true
 chrono.workspace = true
 deadqueue = "0.2.4"

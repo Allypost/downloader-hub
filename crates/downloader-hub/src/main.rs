@@ -36,6 +36,7 @@ async fn main() {
     TaskQueue::init().await.expect("Failed to initialize queue");
 
     tokio::task::spawn(TaskQueueProcessor::run());
+    tokio::task::spawn(app_tasks::start());
 
     server::run().await.expect("Failed to run server");
 }

@@ -27,6 +27,7 @@ async fn main() {
     debug!(config = ?*Config::global(), "Running with config");
 
     tokio::task::spawn(TaskQueueProcessor::run());
+    tokio::task::spawn(app_tasks::start());
 
     bot::run().await.expect("Failed to run server");
 }

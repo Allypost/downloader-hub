@@ -36,6 +36,9 @@ pub struct Config {
 
     #[validate(nested)]
     pub conditional: conditional::ConditionalConfig,
+
+    #[validate(nested)]
+    pub task: common::TaskConfig,
 }
 impl Config {
     #[must_use]
@@ -140,6 +143,7 @@ impl Config {
         self.dependency_paths = args.dependency_path;
         self.endpoint = args.endpoint;
         self.conditional = args.conditional;
+        self.task = args.task;
 
         self
     }
