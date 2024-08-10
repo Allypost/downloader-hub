@@ -28,6 +28,10 @@ impl Downloader for ImgurDownloader {
         "imgur"
     }
 
+    fn description(&self) -> &'static str {
+        "Downloads images and other media from imgur."
+    }
+
     fn get_resolved(
         &self,
         req: &DownloadFileRequest,

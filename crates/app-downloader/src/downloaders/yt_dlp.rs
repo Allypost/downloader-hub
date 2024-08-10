@@ -26,6 +26,10 @@ impl Downloader for YtDlpDownloader {
         "yt-dlp"
     }
 
+    fn description(&self) -> &'static str {
+        "Downloads videos and images using yt-dlp. Supports a wide range of sites."
+    }
+
     fn get_resolved(
         &self,
         req: &DownloadFileRequest,

@@ -17,6 +17,10 @@ impl Downloader for RedditDownloader {
         "reddit"
     }
 
+    fn description(&self) -> &'static str {
+        "Downloads reddit media. Only works on media links (eg. https://i.redd.it/...)"
+    }
+
     fn get_resolved<'a>(
         &'a self,
         req: &'a DownloadFileRequest,

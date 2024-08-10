@@ -24,6 +24,10 @@ impl Downloader for MastodonDownloader {
         "mastodon"
     }
 
+    fn description(&self) -> &'static str {
+        "Downloads images and videos from Mastodon toots and screenshots the toot itself."
+    }
+
     fn get_resolved(
         &self,
         req: &DownloadFileRequest,

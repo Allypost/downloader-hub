@@ -25,6 +25,10 @@ impl Downloader for InstagramDownloader {
         "instagram"
     }
 
+    fn description(&self) -> &'static str {
+        "Downloads images and videos from Instagram posts."
+    }
+
     fn get_resolved(
         &self,
         req: &DownloadFileRequest,

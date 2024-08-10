@@ -17,6 +17,10 @@ impl Downloader for TiktokDownloader {
         "tiktok"
     }
 
+    fn description(&self) -> &'static str {
+        "Downloads videos and images from TikTok posts. Tries to avoid watermarks."
+    }
+
     fn get_resolved(
         &self,
         req: &DownloadFileRequest,

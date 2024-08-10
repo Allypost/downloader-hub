@@ -19,6 +19,10 @@ impl Downloader for GenericDownloader {
         "generic"
     }
 
+    fn description(&self) -> &'static str {
+        "Just tries to download exactly what you give it. No fancy tricks."
+    }
+
     fn get_resolved(
         &self,
         req: &DownloadFileRequest,

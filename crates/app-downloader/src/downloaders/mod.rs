@@ -23,6 +23,8 @@ pub mod yt_dlp;
 pub trait Downloader: Debug + Send + Sync {
     fn name(&self) -> &'static str;
 
+    fn description(&self) -> &'static str;
+
     fn get_resolved(
         &self,
         req: &DownloadFileRequest,

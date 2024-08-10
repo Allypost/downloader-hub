@@ -22,6 +22,10 @@ impl Downloader for TumblrDownloader {
         "tumblr"
     }
 
+    fn description(&self) -> &'static str {
+        "Downloads images and videos from Tumblr and screenshots the post itself."
+    }
+
     fn get_resolved(
         &self,
         req: &DownloadFileRequest,

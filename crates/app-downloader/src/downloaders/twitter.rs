@@ -45,6 +45,10 @@ impl Downloader for TwitterDownloader {
         "twitter"
     }
 
+    fn description(&self) -> &'static str {
+        "Downloads images and videos from Twitter/X tweets/posts. Also screenshots the tweet/post."
+    }
+
     #[app_logger::instrument]
     fn get_resolved(
         &self,
