@@ -25,6 +25,15 @@ pub struct CliConfig {
     #[clap(short = 'd', long, default_value = ".", value_hint = ValueHint::FilePath, value_parser = value_parser_parse_valid_directory())]
     #[validate(custom(function = "validate_is_writable_directory"))]
     pub output_directory: PathBuf,
+
+    /// Rename file paths passed to the command to the standard format.
+    ///
+    /// Newly downloaded files are unaffected as they are
+    /// already named correctly.
+    ///
+    /// The standard format is `<id>.<original_name>.<extension>`.
+    #[clap(long, action = clap::ArgAction::SetTrue)]
+    pub and_rename: bool,
 }
 
 #[derive(Debug, Clone, Default, Args, Serialize, Deserialize, Validate)]
@@ -47,6 +56,15 @@ pub struct UrlGroup {
     #[clap(short = 'f', long = "file", value_hint = ValueHint::FilePath, value_parser = value_parser_parse_valid_file())]
     #[validate(custom(function = "validate_is_files"))]
     pub files: Vec<PathBuf>,
+
+    /// Paths to split and fix.
+    ///
+    /// Paths will be resolved and checked whether they are valid paths or not.
+    ///
+    /// Errors will be thrown if any paths are invalid or if they don't exist.
+    #[clap(short = 's', long = "split-file", value_hint = ValueHint::FilePath, value_parser = value_parser_parse_valid_file())]
+    #[validate(custom(function = "validate_is_files"))]
+    pub split_files: Vec<PathBuf>,
 
     /// Download entry to process
     ///

@@ -1,7 +1,8 @@
-use std::{fmt::Debug, path::PathBuf, result::Result};
+use std::{collections::HashMap, fmt::Debug, path::PathBuf, result::Result};
 
 use app_config::Config;
 use app_downloader::downloaders::DownloadFileRequest;
+use app_fixers::Fixer;
 use tracing_subscriber::{filter::LevelFilter, util::SubscriberInitExt};
 
 #[tokio::main]
@@ -112,13 +113,59 @@ async fn main() {
         failed_fixed.len()
     );
 
-    if !failed_downloaded.is_empty() || !failed_fixed.is_empty() {
+    if cli_config.and_rename {
+        let files_set = {
+            let mut new = std::collections::HashSet::new();
+            new.extend(files);
+            new
+        };
+
+        for (old, new) in &fixed {
+            if files_set.contains(old) {
+                for f in new {
+                    if let Err(e) = app_fixers::fixer::file_rename_to_id::rename_file_to_id(f) {
+                        app_logger::error!("Failed to rename {f:?}: {e:?}");
+                    }
+                }
+            }
+        }
+    }
+
+    let split_files = get_explicit_split_files()
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
+    app_logger::info!("Starting split of {} files", split_files.len());
+    let mut failed_split = vec![];
+    for f in split_files {
+        if let Err(e) = app_fixers::fixer::split_scenes::SplitScenes.run(
+            &f,
+            &HashMap::from_iter([(
+                "output-dir".to_string(),
+                cli_config
+                    .output_directory
+                    .as_os_str()
+                    .to_string_lossy()
+                    .to_string(),
+            )]),
+        ) {
+            app_logger::error!("Failed to split {f:?}: {e}");
+            failed_split.push((f.clone(), e));
+            continue;
+        }
+    }
+
+    if !failed_downloaded.is_empty() || !failed_fixed.is_empty() || !failed_split.is_empty() {
         for (x, e) in failed_downloaded {
             app_logger::error!("Failed to download {x:?}: {e}");
         }
 
         for (x, e) in failed_fixed {
             app_logger::error!("Failed to fix {x:?}: {e}");
+        }
+
+        for (x, e) in failed_split {
+            app_logger::error!("Failed to split {x:?}: {e}");
         }
 
         std::process::exit(1);
@@ -173,6 +220,20 @@ fn get_explicit_urls() -> Vec<Result<url::Url, String>> {
 
 fn parse_url(u: &str) -> Result<url::Url, String> {
     url::Url::parse(u).map_err(|x| x.to_string())
+}
+
+fn get_explicit_split_files() -> Vec<Result<PathBuf, String>> {
+    Config::global()
+        .cli()
+        .entries_group
+        .split_files
+        .iter()
+        .map(|x| (x, parse_file(x)))
+        .map(|(f, maybe_err)| match maybe_err {
+            Ok(x) => Ok(x),
+            Err(err) => Err(format!("Failed to parse {f:?} as path: {err}")),
+        })
+        .collect::<Vec<_>>()
 }
 
 fn get_explicit_files() -> Vec<Result<PathBuf, String>> {
