@@ -6,6 +6,7 @@ use tracing_subscriber::{filter::Directive, fmt, prelude::*, EnvFilter};
 
 pub const COMPONENT_LEVELS: &[(&str, Level)] = &[
     ("downloader_hub", Level::INFO),
+    ("downloader_telegram_bot", Level::INFO),
     ("request", Level::INFO),
     ("app", Level::INFO),
     ("app_config", Level::INFO),
