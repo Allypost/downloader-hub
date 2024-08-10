@@ -156,4 +156,4 @@ LABEL org.opencontainers.image.licenses="MPL-2.0"
 LABEL org.opencontainers.image.authors="Josip Igrec <me@allypost.net>"
 EXPOSE 8000
 ENTRYPOINT [ "/entrypoint.sh" ]
-CMD [ "--help" ]
+# CMD [ "--help" ]
