@@ -1,6 +1,7 @@
 pub mod crop;
 pub mod file_extensions;
 pub mod file_name;
+pub mod file_rename_to_id;
 pub mod media_formats;
 pub mod split_scenes;
 
@@ -28,6 +29,7 @@ pub static ALL_FIXERS: Lazy<Vec<FixerInstance>> = Lazy::new(|| {
     let mut defaults = DEFAULT_FIXERS.clone();
     let rest: Vec<FixerInstance> = vec![
         Arc::new(split_scenes::SplitScenes),
+        Arc::new(file_rename_to_id::RenameToId),
     ];
     defaults.extend(rest);
 
