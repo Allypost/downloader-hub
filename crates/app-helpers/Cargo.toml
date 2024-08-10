@@ -14,7 +14,7 @@ app-logger.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 trash = "5.0.0"
-futures = { version = "0.3.30", features = ["thread-pool"] }
+futures.workspace = true
 tokio.workspace = true
 thiserror.workspace = true
 tryhard = "0.5.1"

@@ -13,7 +13,7 @@ app-config = { workspace = true, features = ["cli"] }
 app-downloader.workspace = true
 app-fixers.workspace = true
 app-logger.workspace = true
-futures = "0.3.30"
+futures.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 tracing-subscriber = { version = "0.3.18", features = [
@@ -23,7 +23,7 @@ tracing-subscriber = { version = "0.3.18", features = [
     "time",
     "parking_lot",
 ] }
-url = "2.5.2"
+url.workspace = true
 
 [lints]
 workspace = true

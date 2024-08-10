@@ -19,8 +19,8 @@ resolve-path = "0.1.0"
 thiserror.workspace = true
 anyhow.workspace = true
 tokio.workspace = true
-futures = { version = "0.3.30", features = ["thread-pool"] }
-async-trait = "0.1.80"
+futures.workspace = true
+async-trait.workspace = true
 once_cell.workspace = true
 
 [lints]

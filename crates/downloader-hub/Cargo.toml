@@ -23,10 +23,10 @@ axum-extra = { version = "0.9.3", features = [
     "multipart",
     "typed-header",
 ] }
-chrono = { version = "0.4.38", features = ["alloc", "serde"] }
+chrono.workspace = true
 deadqueue = "0.2.4"
 dotenvy = "0.15.7"
-futures = { version = "0.3.30", features = ["thread-pool"] }
+futures.workspace = true
 hmac = "0.12.1"
 http-range-header = "0.4.1"
 listenfd = "1.0.1"
@@ -46,8 +46,8 @@ tokio.workspace = true
 tower = "0.4.13"
 tower-http = { version = "0.5.2", features = ["full"] }
 tracing.workspace = true
-ulid = { version = "1.1.2", features = ["postgres"] }
-url = { version = "2.5.2", features = ["serde"] }
+ulid = { version = "1.1.3", features = ["postgres"] }
+url.workspace = true
 
 [lints]
 workspace = true

@@ -23,14 +23,14 @@ reqwest = { version = "0.12.5", default-features = false, features = [
   "trust-dns",
   "cookies",
 ] }
-url = "2.5.2"
+url.workspace = true
 app-config.workspace = true
 app-helpers.workspace = true
 unicode-segmentation = "1.11.0"
 tl = "0.7.8"
 mime2ext = "0.1.52"
 thiserror.workspace = true
-async-trait = "0.1.80"
+async-trait.workspace = true
 once_cell.workspace = true
 http-serde = "2.1.1"
 http = "1.1.0"
