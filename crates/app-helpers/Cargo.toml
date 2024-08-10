@@ -18,6 +18,10 @@ futures = { version = "0.3.30", features = ["thread-pool"] }
 tokio.workspace = true
 thiserror.workspace = true
 tryhard = "0.5.1"
+infer = "0.16.0"
+tree_magic_mini = "3.1.5"
+file-format = { version = "0.25.0", features = ["reader"] }
+mime = "0.3.17"
 
 [lints]
 workspace = true

@@ -26,11 +26,9 @@ axum-extra = { version = "0.9.3", features = [
 chrono = { version = "0.4.38", features = ["alloc", "serde"] }
 deadqueue = "0.2.4"
 dotenvy = "0.15.7"
-file-format = { version = "0.25.0", features = ["reader"] }
 futures = { version = "0.3.30", features = ["thread-pool"] }
 hmac = "0.12.1"
 http-range-header = "0.4.1"
-infer = "0.16.0"
 listenfd = "1.0.1"
 once_cell.workspace = true
 sea-orm = { version = "0.12.15", features = [
@@ -48,7 +46,6 @@ tokio.workspace = true
 tower = "0.4.13"
 tower-http = { version = "0.5.2", features = ["full"] }
 tracing.workspace = true
-tree_magic_mini = "3.1.5"
 ulid = { version = "1.1.2", features = ["postgres"] }
 url = { version = "2.5.2", features = ["serde"] }
 
