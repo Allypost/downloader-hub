@@ -11,7 +11,7 @@ use teloxide::{
     adaptors::trace, prelude::*, requests::RequesterExt, types::ParseMode,
     utils::command::BotCommands,
 };
-use tracing::{field, Span};
+use tracing::{field, Instrument, Span};
 use url::Url;
 
 use crate::queue::{task::Task, TaskQueue};
@@ -84,46 +84,53 @@ pub async fn run() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[tracing::instrument(name = "message", skip(bot, msg), fields(chat = %msg.chat.id, id = %msg.id, with = field::Empty))]
-async fn answer(bot: &TeloxideBot, msg: Message) -> ResponseResult<()> {
+#[tracing::instrument(name = "message", skip(_bot, msg), fields(chat = %msg.chat.id, id = %msg.id, with = field::Empty))]
+async fn answer(_bot: &TeloxideBot, msg: Message) -> ResponseResult<()> {
     trace!(?msg, "Got message");
 
-    {
-        let name = msg
-            .chat
-            .username()
-            .map(|x| format!("@{}", x))
-            .or_else(|| msg.chat.title().map(ToString::to_string))
-            .or_else(|| {
-                let mut name = String::new();
-                if let Some(first_name) = msg.chat.first_name() {
-                    name.push_str(first_name);
-                }
-                if let Some(last_name) = msg.chat.last_name() {
-                    name.push(' ');
-                    name.push_str(last_name);
-                }
+    tokio::task::spawn(
+        async move {
+            {
+                let name = msg
+                    .chat
+                    .username()
+                    .map(|x| format!("@{}", x))
+                    .or_else(|| msg.chat.title().map(ToString::to_string))
+                    .or_else(|| {
+                        let mut name = String::new();
+                        if let Some(first_name) = msg.chat.first_name() {
+                            name.push_str(first_name);
+                        }
+                        if let Some(last_name) = msg.chat.last_name() {
+                            name.push(' ');
+                            name.push_str(last_name);
+                        }
 
-                Some(name)
-            });
+                        Some(name)
+                    });
 
-        if let Some(name) = name {
-            Span::current().record("with", field::debug(name));
+                if let Some(name) = name {
+                    Span::current().record("with", field::debug(name));
+                }
+            }
+
+            let bot_me = TelegramBot::instance().get_me().await?;
+
+            let msg_text = msg
+                .text()
+                .or_else(|| msg.caption())
+                .map(ToString::to_string)
+                .unwrap_or_default();
+
+            match BotCommand::parse(&msg_text, bot_me.username()) {
+                Ok(c) => handle_command(msg, c).await,
+                Err(_) => handle_message(msg).await,
+            }
         }
-    }
+        .instrument(Span::current()),
+    );
 
-    let bot_me = bot.get_me().await?;
-
-    let msg_text = msg
-        .text()
-        .or_else(|| msg.caption())
-        .map(ToString::to_string)
-        .unwrap_or_default();
-
-    match BotCommand::parse(&msg_text, bot_me.username()) {
-        Ok(c) => handle_command(msg, c).await,
-        Err(_) => handle_message(msg).await,
-    }
+    Ok(())
 }
 
 async fn handle_command(msg: Message, command: BotCommand) -> ResponseResult<()> {
