@@ -97,11 +97,15 @@ steps:
         [🌐 Link to build]({{ build.link }})
         \
         [🕸️Link to commit]({{ commit.link }})
-
+    depends_on:
+      - build-docker-image-hub
+      - build-docker-image-telegram-bot
     when:
       status:
         - success
         - failure
+
+
 volumes:
   - name: docker
     host:
