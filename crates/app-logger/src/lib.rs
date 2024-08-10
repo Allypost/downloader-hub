@@ -14,6 +14,8 @@ pub const COMPONENT_LEVELS: &[(&str, Level)] = &[
     ("app_fixers", Level::INFO),
     ("app_helpers", Level::INFO),
     ("app_logger", Level::INFO),
+    ("app_tasks", Level::INFO),
+    ("app_validators", Level::INFO),
 ];
 
 /// Initialize the logger
