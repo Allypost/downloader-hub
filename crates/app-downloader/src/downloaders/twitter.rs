@@ -32,9 +32,9 @@ static DEFAULT_AUTHORIZATION: &str =
      3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA";
 
 static TWEET_INFO_ENDPOINT: &str =
-    "https://x.com/i/api/graphql/0hWvDhmW8YQ-S_ib3azIrw/TweetResultByRestId";
+    "https://x.com/i/api/graphql/sCU6ckfHY0CyJ4HFjPhjtg/TweetResultByRestId";
 
-static GUEST_TOKEN_ENDPOINT: &str = "https://api.twitter.com/1.1/guest/activate.json";
+static GUEST_TOKEN_ENDPOINT: &str = "https://api.x.com/1.1/guest/activate.json";
 
 #[derive(Debug, Default)]
 pub struct TwitterDownloader;
