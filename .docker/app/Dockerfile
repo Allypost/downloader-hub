@@ -1,5 +1,5 @@
 ARG RUST_VERSION='1.80'
-ARG RUST_TARGET='x86_64-unknown-linux-musl'
+ARG RUST_TARGET='x86_64-unknown-linux-gnu'
 ARG BINARY_NAME='downloader-hub'
 
 ARG APP_FEATURES=''
