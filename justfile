@@ -2,7 +2,7 @@ set dotenv-load := true
 set positional-arguments := true
 
 rustflags := "-C target-feature=+crt-static"
-rust_target := "x86_64-unknown-linux-musl"
+rust_target := "x86_64-unknown-linux-gnu"
 
 default:
     @just --list
