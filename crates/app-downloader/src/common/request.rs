@@ -8,6 +8,8 @@ use reqwest::blocking::{
 use super::USER_AGENT;
 use crate::downloaders::{DownloadFileRequest, DownloadUrlInfo};
 
+const DEFAULT_TIMEOUT_SECS: u64 = 30;
+
 pub struct Client;
 
 impl Client {
@@ -26,7 +28,7 @@ impl Client {
                 req.method.as_str().parse().expect("Failed to parse method"),
                 url.url(),
             )
-            .timeout(Duration::from_secs(5));
+            .timeout(Duration::from_secs(DEFAULT_TIMEOUT_SECS));
 
         for (k, v) in &req.headers {
             builder = builder.header(k, v);
@@ -45,6 +47,6 @@ impl Client {
     pub fn builder() -> ReqwestClientBuilder {
         ReqwestClient::builder()
             .user_agent(USER_AGENT)
-            .timeout(Duration::from_secs(5))
+            .timeout(Duration::from_secs(DEFAULT_TIMEOUT_SECS))
     }
 }
