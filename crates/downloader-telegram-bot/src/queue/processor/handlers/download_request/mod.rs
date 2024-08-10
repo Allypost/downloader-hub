@@ -46,7 +46,6 @@ impl Handler for DownloadRequestHandler {
     }
 
     async fn handle(&self, task: &Task) -> Result<HandlerReturn, HandlerError> {
-        info!(task_id = ?task.id(), "Handling download request");
         trace!(?task, "Handling download request");
 
         task.update_status_message("Processing the request...")
@@ -59,6 +58,8 @@ impl Handler for DownloadRequestHandler {
             _ => return Err(HandlerError::Fatal("Invalid task info".to_string())),
         };
 
+        trace!(?msg, "Got message from task");
+
         if let Some(user) = msg.from() {
             Span::current().record("uid", field::display(user.id.0));
             Span::current().record("name", field::debug(user.full_name()));
@@ -68,12 +69,17 @@ impl Handler for DownloadRequestHandler {
             }
         }
 
+        info!(task_id = ?task.id(), "Handling download request");
+
         let temp_download_dir = TempDir::in_tmp_with_prefix(&format!(
             "downloader-hub.telegram-download.{}.",
             task.id()
         ))?;
 
+        debug!("Downloading files");
         let paths_to_fix = download_files(temp_download_dir.path(), task, msg).await?;
+        debug!("Downloaded files");
+        trace!(?paths_to_fix, "Downloaded files");
 
         if paths_to_fix.is_empty() {
             task.update_status_message("No supported URL or file found in message")

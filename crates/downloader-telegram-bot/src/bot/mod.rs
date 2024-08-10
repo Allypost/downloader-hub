@@ -84,7 +84,7 @@ pub async fn run() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[tracing::instrument(name = "message", skip(_bot, msg), fields(chat = %msg.chat.id, id = %msg.id, with = field::Empty))]
+#[tracing::instrument(name = "message", skip(_bot, msg), fields(chat = %msg.chat.id, msg_id = %msg.id, with = field::Empty))]
 async fn answer(_bot: &TeloxideBot, msg: Message) -> ResponseResult<()> {
     trace!(?msg, "Got message");
 
