@@ -2,7 +2,10 @@ use clap::{Args, ValueHint};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-use crate::common::{absolute_url, validate_absolute_url, validate_min_key_length};
+use crate::validators::{
+    str::value_parser_ensure_min_length,
+    url::{validate_is_absolute_url, value_parser_parse_absolute_url},
+};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, Args, Validate)]
 pub struct ServerConfig {
@@ -33,13 +36,13 @@ pub struct ServerRunConfig {
     /// The admin key for the server.
     /// Used to authenticate admin requests.
     /// Should be at least 32 characters long and securely random.
-    #[arg(long, env = "DOWNLOADER_HUB_ADMIN_KEY", value_parser = validate_min_key_length(32))]
+    #[arg(long, env = "DOWNLOADER_HUB_ADMIN_KEY", value_parser = value_parser_ensure_min_length(32))]
     #[validate(length(min = 32))]
     pub admin_key: String,
 
     /// The key used for signing various tokens.
     /// Should be at least 32 characters long and securely random.
-    #[arg(long, env = "DOWNLOADER_HUB_SIGNING_KEY", value_parser = validate_min_key_length(32))]
+    #[arg(long, env = "DOWNLOADER_HUB_SIGNING_KEY", value_parser = value_parser_ensure_min_length(32))]
     #[validate(length(min = 32))]
     pub signing_key: String,
 }
@@ -61,7 +64,7 @@ pub struct AppConfig {
     /// The public URL where the application is served.
     /// This is used to generate links to the application.
     /// Should be in the format of `https://www.example.com/some/path` or `http://127.0.0.1:8000`
-    #[clap(long, env = "DOWNLOADER_HUB_PUBLIC_URL", value_hint = ValueHint::Url, value_parser = validate_absolute_url())]
-    #[validate(custom(function = "absolute_url"))]
+    #[clap(long, env = "DOWNLOADER_HUB_PUBLIC_URL", value_hint = ValueHint::Url, value_parser = value_parser_parse_absolute_url())]
+    #[validate(custom(function = "validate_is_absolute_url"))]
     pub public_url: String,
 }

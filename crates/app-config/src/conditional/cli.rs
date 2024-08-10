@@ -1,10 +1,13 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use clap::{Args, ValueHint};
 use serde::{Deserialize, Serialize};
-use validator::{Validate, ValidationError};
+use validator::Validate;
 
-use crate::common::validate_valid_path;
+use crate::validators::{
+    directory::{validate_is_writable_directory, value_parser_parse_valid_directory},
+    file::{validate_is_files, value_parser_parse_valid_file},
+};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, Args, Validate)]
 #[clap(next_help_heading = "Cli options")]
@@ -19,8 +22,8 @@ pub struct CliConfig {
     /// Will be created if it doesn't exist.
     ///
     /// Will error if it is not a valid path.
-    #[clap(short = 'd', long, default_value = ".", value_hint = ValueHint::FilePath, value_parser = validate_valid_resolved_directory())]
-    #[validate(custom(function = "valid_directory"))]
+    #[clap(short = 'd', long, default_value = ".", value_hint = ValueHint::FilePath, value_parser = value_parser_parse_valid_directory())]
+    #[validate(custom(function = "validate_is_writable_directory"))]
     pub output_directory: PathBuf,
 }
 
@@ -41,8 +44,8 @@ pub struct UrlGroup {
     /// Paths will be resolved and checked whether they are valid paths or not.
     ///
     /// Errors will be thrown if any paths are invalid or if they don't exist.
-    #[clap(short = 'f', long = "file", value_hint = ValueHint::FilePath, value_parser = validate_valid_path())]
-    #[validate(custom(function = "valid_files"))]
+    #[clap(short = 'f', long = "file", value_hint = ValueHint::FilePath, value_parser = value_parser_parse_valid_file())]
+    #[validate(custom(function = "validate_is_files"))]
     pub files: Vec<PathBuf>,
 
     /// Download entry to process
@@ -58,51 +61,3 @@ pub struct UrlGroup {
 }
 
 pub type DownloadEntry = String;
-
-#[must_use]
-pub fn validate_valid_resolved_directory() -> impl clap::builder::TypedValueParser {
-    move |s: &str| {
-        let path = Path::new(s);
-
-        if !path.exists() {
-            return Err("File does not exist");
-        }
-
-        if !path.is_dir() {
-            return Err("Path is not a directory");
-        }
-
-        let path = path
-            .to_path_buf()
-            .canonicalize()
-            .map_err(|_| "Failed to canonicalize path")?;
-
-        Ok(path)
-    }
-}
-
-pub fn valid_files(paths: &Vec<PathBuf>) -> Result<(), ValidationError> {
-    for path in paths {
-        if !path.exists() {
-            return Err(ValidationError::new("File does not exist"));
-        }
-
-        if !path.is_file() {
-            return Err(ValidationError::new("Path is not a valid file"));
-        }
-    }
-
-    Ok(())
-}
-
-pub fn valid_directory(path: &Path) -> Result<(), ValidationError> {
-    if !path.exists() {
-        return Err(ValidationError::new("Directory does not exist"));
-    }
-
-    if !path.is_dir() {
-        return Err(ValidationError::new("Path is not a directory"));
-    }
-
-    Ok(())
-}
