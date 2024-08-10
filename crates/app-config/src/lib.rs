@@ -78,6 +78,13 @@ impl Config {
         &self.conditional.server
     }
 
+    #[cfg(feature = "telegram-bot")]
+    #[must_use]
+    #[inline]
+    pub const fn telegram_bot(&self) -> &conditional::telegram_bot::TelegramBotConfig {
+        &self.conditional.telegram_bot
+    }
+
     #[must_use]
     #[inline]
     pub fn get_cache_dir(&self) -> PathBuf {

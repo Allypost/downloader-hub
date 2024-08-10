@@ -2,6 +2,7 @@ use std::env;
 
 use app_logger::{debug, info};
 use downloaders::{DownloadFileRequest, DownloadResult, DownloaderReturn};
+pub use handler::default_download_handlers;
 use handler::DownloadHandler;
 
 use crate::handler::DEFAULT_DOWNLOAD_HANDLERS;

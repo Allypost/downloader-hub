@@ -26,6 +26,8 @@ dev-watch-server *args: (dev-watch 'downloader-hub' args)
 
 dev-watch-cli *args: (dev-watch 'downloader-cli' args)
 
+dev-watch-telegram-bot *args: (dev-watch 'downloader-telegram-bot' args)
+
 dev-run package *args:
     RUSTFLAGS='{{rustflags}}' \
     cargo run \
@@ -36,6 +38,8 @@ dev-run package *args:
 dev-run-server *args: (dev-run 'downloader-hub' args)
 
 dev-run-cli *args: (dev-run 'downloader-cli' args)
+
+dev-run-telegram-bot *args: (dev-run 'downloader-telegram-bot' args)
 
 migrate +ARGS: && generate-entities
     cd ./crates/app-migration \

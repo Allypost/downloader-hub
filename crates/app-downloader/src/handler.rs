@@ -26,6 +26,11 @@ impl DownloadHandler {
     }
 
     #[must_use]
+    pub fn handler(&self) -> &dyn Downloader {
+        &*self.handler
+    }
+
+    #[must_use]
     pub fn can_handle(&self, file: &DownloadFileRequest) -> bool {
         (self.can_handle)(&file.original_url)
     }
@@ -45,7 +50,10 @@ impl DownloadHandler {
     }
 }
 
-pub static DEFAULT_DOWNLOAD_HANDLERS: Lazy<Vec<DownloadHandler>> = Lazy::new(|| {
+pub static DEFAULT_DOWNLOAD_HANDLERS: Lazy<Vec<DownloadHandler>> =
+    Lazy::new(default_download_handlers);
+
+pub fn default_download_handlers() -> Vec<DownloadHandler> {
     vec![
         DownloadHandler::new(InstagramDownloader::is_post_url, InstagramDownloader),
         DownloadHandler::new(TwitterDownloader::is_post_url, TwitterDownloader),
@@ -58,4 +66,4 @@ pub static DEFAULT_DOWNLOAD_HANDLERS: Lazy<Vec<DownloadHandler>> = Lazy::new(|| 
         DownloadHandler::new(MastodonDownloader::is_mastodon_toot, MastodonDownloader),
         DownloadHandler::new(|_| true, YtDlpDownloader),
     ]
-});
+}

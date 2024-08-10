@@ -6,6 +6,8 @@ use validator::Validate;
 pub mod cli;
 #[cfg(feature = "server")]
 pub mod server;
+#[cfg(feature = "telegram-bot")]
+pub mod telegram_bot;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, Validate, Args)]
 pub struct ConditionalConfig {
@@ -20,4 +22,10 @@ pub struct ConditionalConfig {
     #[validate(nested)]
     #[clap(flatten)]
     pub cli: cli::CliConfig,
+
+    #[cfg(feature = "telegram-bot")]
+    /// Config for the Telegram bot
+    #[validate(nested)]
+    #[clap(flatten)]
+    pub telegram_bot: telegram_bot::TelegramBotConfig,
 }
