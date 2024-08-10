@@ -23,7 +23,7 @@ pub fn transfer_file_times(path_from: &Path, path_to: &Path) -> Result<(), Trans
 
 pub fn transferable_file_times(
     path_from: &Path,
-) -> Result<impl FnOnce(&Path) -> Result<(), TransferTimesError>, TransferTimesError> {
+) -> Result<impl Fn(&Path) -> Result<(), TransferTimesError>, TransferTimesError> {
     trace!("Getting file times of {path:?}", path = path_from);
 
     let old_meta = path_from.metadata().map_err(TransferTimesError::Metadata)?;

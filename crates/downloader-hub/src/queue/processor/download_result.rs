@@ -67,7 +67,7 @@ async fn fix(request_id: i32, app_path: AppPath) -> Result<(), HandlerError> {
     )
     .await?;
 
-    let new_path = app_fixers::as_future::fix_file(&path).await;
+    let new_path = app_fixers::fix_file(&path).await;
 
     match new_path {
         Err(e) => {
@@ -80,6 +80,15 @@ async fn fix(request_id: i32, app_path: AppPath) -> Result<(), HandlerError> {
             .await?;
         }
         Ok(new_path) => {
+            // TODO: Fix this to allow multiple new paths
+            let new_path = match new_path.first() {
+                Some(new_path) => new_path,
+                None => {
+                    return Err(HandlerError::Fatal(
+                        "Fixer returned no new paths".to_string(),
+                    ))
+                }
+            };
             app_helpers::futures::retry_fn(5, || async {
                 let path = path.clone();
                 let new_path = new_path.clone();

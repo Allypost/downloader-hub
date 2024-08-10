@@ -6,7 +6,26 @@ use std::{
 use app_logger::{debug, trace};
 use thiserror::Error;
 
-use crate::{error::FixerError, FixerReturn, IntoFixerReturn};
+use crate::{error::FixerError, Fixer, FixerOptions, FixerReturn, IntoFixerReturn};
+
+#[derive(Debug)]
+pub struct FileName;
+#[async_trait::async_trait]
+impl Fixer for FileName {
+    fn name(&self) -> &'static str {
+        "file-name"
+    }
+
+    fn description(&self) -> &'static str {
+        "Fix file name to contain only approved characters."
+    }
+
+    /// Options:
+    ///
+    fn run(&self, file_path: &Path, _options: &FixerOptions) -> FixerReturn {
+        fix_file_name(file_path)
+    }
+}
 
 pub fn fix_file_name(file_path: &Path) -> FixerReturn {
     debug!("Checking file name for {file_path:?}...");
@@ -22,7 +41,7 @@ pub fn fix_file_name(file_path: &Path) -> FixerReturn {
         }
         Some(name) => {
             debug!("File name for {name:?} is OK. Skipping...");
-            return Ok(file_path.to_path_buf());
+            return Ok(vec![file_path.to_path_buf()]);
         }
     };
 
@@ -40,7 +59,7 @@ pub fn fix_file_name(file_path: &Path) -> FixerReturn {
     debug!("Renaming file from {file_path:?} to {new_file_path:?}");
 
     fs::rename(file_path, &new_file_path)
-        .map(|()| new_file_path)
+        .map(|()| vec![new_file_path])
         .map_err(FileNameError::Rename)
         .map_err(FixerError::failed_fix)
 }

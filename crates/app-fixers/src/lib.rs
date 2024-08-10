@@ -1,132 +1,100 @@
-use std::path::{Path, PathBuf};
+use std::{
+    collections::HashMap,
+    convert::Into,
+    path::{Path, PathBuf},
+};
 
 use error::FixerError;
+pub use fixer::default_fixers;
+use fixer::FixerInstance;
+use resolve_path::PathResolveExt;
+use util::transferable_file_times;
 
 mod common;
 pub mod error;
 pub mod fixer;
 mod util;
 
-pub static DEFAULT_FIXERS: &[Fixer] = &[
-    fixer::file_extensions::fix_file_extension,
-    fixer::file_name::fix_file_name,
-    fixer::media_formats::convert_into_preferred_formats,
-    fixer::crop::auto_crop_video,
-];
-
-pub fn fix_file(path: &Path) -> FixerReturn {
-    sync::fix_file_with(DEFAULT_FIXERS, path)
+pub async fn fix_file(path: &Path) -> FixerReturn {
+    fix_file_with(fixer::default_fixers(), path).await
 }
 
-pub async fn fix_file_async(path: &Path) -> FixerReturn {
-    as_future::fix_file_with(DEFAULT_FIXERS, path).await
-}
+pub async fn fix_file_with(fixers: Vec<FixerInstance>, path: &Path) -> FixerReturn {
+    let p = path
+        .try_resolve()
+        .map_err(|e| FixerError::FailedToCanonicalizePath(path.to_path_buf(), e))?
+        .canonicalize()
+        .map_err(|e| FixerError::FailedToCanonicalizePath(path.to_path_buf(), e))?;
 
-pub mod as_future {
-    use std::path::{Path, PathBuf};
-
-    use resolve_path::PathResolveExt;
-
-    use crate::{
-        error::FixerError, util::transferable_file_times, Fixer, IntoFixerReturn, DEFAULT_FIXERS,
-    };
-
-    pub async fn fix_files_with(
-        fixers: &[Fixer],
-        paths: &[PathBuf],
-    ) -> Result<Vec<PathBuf>, FixerError> {
-        let res = paths
-            .iter()
-            .map(|path| fix_file_with(fixers, path))
-            .collect::<Vec<_>>();
-
-        futures::future::join_all(res)
-            .await
-            .into_iter()
-            .collect::<Result<Vec<_>, _>>()
+    if !p.exists() {
+        return Err(FixerError::FileNotFound(p));
     }
 
-    pub async fn fix_file(path: &Path) -> Result<PathBuf, FixerError> {
-        fix_file_with(DEFAULT_FIXERS, path).await
+    if !p.is_file() {
+        return Err(FixerError::NotAFile(p));
     }
 
-    pub async fn fix_file_with(fixers: &[Fixer], path: &Path) -> Result<PathBuf, FixerError> {
-        let p = path
-            .resolve()
-            .canonicalize()
-            .map_err(|e| FixerError::FailedToCanonicalizePath(path.to_path_buf(), e))?;
+    let transfer_file_times = transferable_file_times(&p);
 
-        if !p.exists() {
-            return Err(FixerError::FileNotFound(p));
+    let res = tokio::task::spawn_blocking(move || {
+        let mut ps = vec![p];
+        for fixer in fixers {
+            let new_p = ps
+                .into_iter()
+                .map(|p| fixer.run(&p, &HashMap::new()))
+                .collect::<Result<Vec<_>, _>>()?
+                .into_iter()
+                .flatten()
+                .collect();
+
+            ps = new_p;
         }
 
-        if !p.is_file() {
-            return Err(FixerError::NotAFile(p));
-        }
+        Ok::<_, FixerError>(ps)
+    })
+    .await
+    .map_err(FixerError::JoinError)??;
 
-        let transfer_file_times = transferable_file_times(&p);
-
-        let fixers = fixers.to_vec();
-
-        let res = tokio::task::spawn_blocking(move || {
-            let mut p = p.clone();
-            for filter in fixers {
-                p = filter(&p).into_fixer_return()?;
-            }
-
-            Ok(p)
-        })
-        .await
-        .map_err(FixerError::JoinError)?;
-
-        if let Ok(new_path) = res.as_ref() {
+    if let Ok(transfer_file_times) = transfer_file_times {
+        for new_path in &res {
             if new_path.as_os_str() != path.as_os_str() {
-                if let Ok(transfer_file_times) = transfer_file_times {
-                    if let Err(e) = transfer_file_times(new_path) {
-                        app_logger::warn!(
-                            "Failed to transfer file times of {path:?} to {new_path:?}: {e:?}"
-                        );
-                    }
+                if let Err(e) = transfer_file_times(new_path) {
+                    app_logger::warn!(
+                        "Failed to transfer file times of {path:?} to {new_path:?}: {e:?}"
+                    );
                 }
             }
         }
+    }
 
-        res
+    Ok(res)
+}
+
+pub type FixerReturn = Result<Vec<PathBuf>, FixerError>;
+pub type FixerOptions = HashMap<String, String>;
+#[async_trait::async_trait]
+pub trait Fixer: std::fmt::Debug + Send + Sync {
+    fn name(&self) -> &'static str;
+
+    fn description(&self) -> &'static str;
+
+    fn run(&self, file_path: &Path, options: &FixerOptions) -> FixerReturn;
+
+    #[allow(unused_variables)]
+    fn can_run(&self, file_path: &Path, options: &FixerOptions) -> bool {
+        true
     }
 }
 
-pub mod sync {
-    use std::path::{Path, PathBuf};
-
-    use app_helpers::futures::run_async;
-
-    use crate::{error::FixerError, Fixer, DEFAULT_FIXERS};
-
-    pub fn fix_files(paths: &[PathBuf]) -> Result<Vec<PathBuf>, FixerError> {
-        fix_files_with(DEFAULT_FIXERS, paths)
-    }
-
-    pub fn fix_files_with(fixers: &[Fixer], paths: &[PathBuf]) -> Result<Vec<PathBuf>, FixerError> {
-        run_async(crate::as_future::fix_files_with(fixers, paths))
-    }
-
-    pub fn fix_file(path: &Path) -> Result<PathBuf, FixerError> {
-        fix_file_with(DEFAULT_FIXERS, path)
-    }
-
-    pub fn fix_file_with(fixers: &[Fixer], path: &Path) -> Result<PathBuf, FixerError> {
-        run_async(crate::as_future::fix_file_with(fixers, path))
-    }
-}
-
-type Fixer = fn(&Path) -> FixerReturn;
-
-type FixerReturn = Result<PathBuf, FixerError>;
-trait IntoFixerReturn {
+pub trait IntoFixerReturn {
     fn into_fixer_return(self) -> FixerReturn;
 }
-impl IntoFixerReturn for FixerReturn {
+impl<T, E> IntoFixerReturn for Result<T, E>
+where
+    T: Into<Vec<PathBuf>>,
+    E: Into<FixerError>,
+{
     fn into_fixer_return(self) -> FixerReturn {
-        self
+        self.map(Into::into).map_err(Into::into)
     }
 }

@@ -15,11 +15,28 @@ use crate::{
     common::command::{Cmd, CmdError},
     error::FixerError,
     util::transfer_file_times,
-    FixerReturn, IntoFixerReturn,
+    Fixer, FixerOptions, FixerReturn, IntoFixerReturn,
 };
 
-pub fn auto_crop_video(file_path: &Path) -> FixerReturn {
-    do_auto_crop_video(file_path).map_err(FixerError::failed_fix)
+#[derive(Debug)]
+pub struct CropBars;
+#[async_trait::async_trait]
+impl Fixer for CropBars {
+    fn name(&self) -> &'static str {
+        "crop-bars"
+    }
+
+    fn description(&self) -> &'static str {
+        "Crops dead space around the video. Supports both black and white outlines."
+    }
+
+    /// Options:
+    ///
+    fn run(&self, file_path: &Path, _options: &FixerOptions) -> FixerReturn {
+        do_auto_crop_video(file_path)
+            .map(|x| vec![x])
+            .into_fixer_return()
+    }
 }
 
 pub fn do_auto_crop_video(file_path: &Path) -> Result<PathBuf, CropError> {
@@ -293,7 +310,7 @@ impl From<CropError> for FixerError {
 }
 
 impl IntoFixerReturn for CropError {
-    fn into_fixer_return(self) -> Result<PathBuf, FixerError> {
+    fn into_fixer_return(self) -> FixerReturn {
         Err(FixerError::FailedFix(self.into()))
     }
 }

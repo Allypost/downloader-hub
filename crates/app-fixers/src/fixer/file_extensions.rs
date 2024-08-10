@@ -7,7 +7,26 @@ use std::{
 use app_logger::{debug, trace};
 use thiserror::Error;
 
-use crate::{FixerReturn, IntoFixerReturn};
+use crate::{Fixer, FixerOptions, FixerReturn, IntoFixerReturn};
+
+#[derive(Debug)]
+pub struct FileExtension;
+#[async_trait::async_trait]
+impl Fixer for FileExtension {
+    fn name(&self) -> &'static str {
+        "file-extension"
+    }
+
+    fn description(&self) -> &'static str {
+        "Fix file extensions to match the file type."
+    }
+
+    /// Options:
+    ///
+    fn run(&self, file_path: &Path, _options: &FixerOptions) -> FixerReturn {
+        fix_file_extension(file_path)
+    }
+}
 
 pub fn fix_file_extension(file_path: &Path) -> FixerReturn {
     debug!("Checking file extension for {file_path:?}...");
@@ -26,7 +45,7 @@ pub fn fix_file_extension(file_path: &Path) -> FixerReturn {
     if let Some(extension) = extension {
         if extension == file_ext {
             debug!("File extension is correct");
-            return Ok(file_path.to_path_buf());
+            return Ok(vec![file_path.to_path_buf()]);
         }
     }
 
@@ -40,7 +59,7 @@ pub fn fix_file_extension(file_path: &Path) -> FixerReturn {
 
     debug!("Renaming file from {file_path:?} to {new_file_path:?}");
     match fs::rename(file_path, &new_file_path) {
-        Ok(()) => Ok(new_file_path),
+        Ok(()) => Ok(vec![new_file_path]),
         Err(e) => FileExtensionError::UnableToRenameFile(e).into_fixer_return(),
     }
 }

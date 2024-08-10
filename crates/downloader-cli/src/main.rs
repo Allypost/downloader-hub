@@ -5,10 +5,13 @@ use app_downloader::downloaders::DownloadFileRequest;
 use tracing_subscriber::{filter::LevelFilter, util::SubscriberInitExt};
 
 #[tokio::main]
+#[allow(clippy::too_many_lines)]
 async fn main() {
     init_log();
 
-    app_logger::debug!(config = ?*Config::global(), "Running with config");
+    let config = Config::global();
+
+    app_logger::debug!(config = ?*config, "Running with config");
 
     let urls = get_explicit_urls();
     let mut urls = print_errors("urls", urls);
@@ -16,7 +19,9 @@ async fn main() {
     let files = get_explicit_files();
     let mut files = print_errors("files", files);
 
-    for x in &Config::global().cli().entries_group.urls_or_files {
+    let cli_config = config.cli();
+
+    for x in &cli_config.entries_group.urls_or_files {
         let mut errs = vec![];
 
         match parse_url(x) {
@@ -42,6 +47,8 @@ async fn main() {
 
     app_logger::debug!(urls = ?urls, files = ?files, "Parsed urls and files");
 
+    app_logger::info!("Outputting to {:?}", cli_config.output_directory);
+
     app_logger::info!("Starting download");
     let downloaded_urls = {
         let downloaded_urls = urls
@@ -50,7 +57,7 @@ async fn main() {
                 tokio::task::spawn_blocking(move || {
                     app_downloader::download_file(&DownloadFileRequest::new(
                         &url,
-                        &Config::global().cli().download_directory,
+                        &cli_config.output_directory,
                     ))
                     .into_iter()
                     .map(|x| x.map_err(|e| (url.to_string(), e)))
@@ -79,7 +86,7 @@ async fn main() {
     let to_fix = downloaded
         .into_iter()
         .map(|x| x.path)
-        .chain(files)
+        .chain(files.clone())
         .collect::<Vec<_>>();
 
     app_logger::debug!(files = ?to_fix, "Files to fix");
@@ -87,7 +94,12 @@ async fn main() {
     let fixed_files = {
         let fixed_files = to_fix
             .into_iter()
-            .map(|x| async move { app_fixers::fix_file_async(&x).await.map_err(|e| (x, e)) })
+            .map(|x| async move {
+                app_fixers::fix_file(&x)
+                    .await
+                    .map(|n| (x.clone(), n))
+                    .map_err(|e| (x, e))
+            })
             .collect::<Vec<_>>();
 
         futures::future::join_all(fixed_files).await
@@ -158,6 +170,7 @@ fn get_explicit_urls() -> Vec<Result<url::Url, String>> {
         })
         .collect::<Vec<_>>()
 }
+
 fn parse_url(u: &str) -> Result<url::Url, String> {
     url::Url::parse(u).map_err(|x| x.to_string())
 }

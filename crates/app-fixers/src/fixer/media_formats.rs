@@ -18,7 +18,29 @@ use app_logger::{debug, error, trace};
 use image::ColorType;
 use thiserror::Error;
 
-use crate::{error::FixerError, util::transferable_file_times, FixerReturn, IntoFixerReturn};
+use crate::{
+    error::FixerError, util::transferable_file_times, Fixer, FixerOptions, FixerReturn,
+    IntoFixerReturn,
+};
+
+#[derive(Debug)]
+pub struct MediaFormats;
+#[async_trait::async_trait]
+impl Fixer for MediaFormats {
+    fn name(&self) -> &'static str {
+        "media-formats"
+    }
+
+    fn description(&self) -> &'static str {
+        "Re-encode files to match more standard formats (eg. webm -> mp4)."
+    }
+
+    /// Options:
+    ///
+    fn run(&self, file_path: &Path, _options: &FixerOptions) -> FixerReturn {
+        convert_into_preferred_formats(file_path)
+    }
+}
 
 pub fn convert_into_preferred_formats(file_path: &Path) -> FixerReturn {
     debug!("Checking if {file_path:?} has unwanted formats");
@@ -27,7 +49,7 @@ pub fn convert_into_preferred_formats(file_path: &Path) -> FixerReturn {
         .and_then(check_and_fix_file)
         .map(|p| {
             debug!("File {file_path:?} done being converted");
-            p
+            vec![p]
         })
         .map_err(FixerError::failed_fix)
 }
