@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use app_logger::{debug, trace};
 
 use super::{
-    yt_dlp::YtDlpDownloader, DownloadFileRequest, DownloadUrlInfo, Downloader, DownloaderReturn,
+    generic::GenericDownloader, DownloadFileRequest, DownloadUrlInfo, Downloader, DownloaderReturn,
     ResolvedDownloadFileRequest,
 };
 use crate::common::{request::Client, USER_AGENT};
@@ -34,7 +34,7 @@ impl Downloader for TiktokDownloader {
     }
 
     fn download_resolved(&self, resolved_file: &ResolvedDownloadFileRequest) -> DownloaderReturn {
-        YtDlpDownloader.download_resolved(resolved_file)
+        GenericDownloader.download_resolved(resolved_file)
     }
 }
 
