@@ -110,11 +110,10 @@ fn get_media_download_urls(req: &DownloadFileRequest) -> Result<Vec<DownloadUrlI
         .ok_or_else(|| "Failed to get video url from video data".to_string())?;
     trace!(?video_url, "Got video url from video data");
 
-    dbg!(Ok(vec![DownloadUrlInfo::from_url(video_url)
+    let res = DownloadUrlInfo::from_url(video_url)
         .with_header("User-Agent", &USER_AGENT)
         .with_header("Referer", &req.original_url)
-        .with_header(
-            "Cookie",
-            &format!("tt_chain_token={}", csrf_token),
-        )]))
+        .with_header("Cookie", &format!("tt_chain_token={}", csrf_token));
+
+    Ok(vec![res])
 }
