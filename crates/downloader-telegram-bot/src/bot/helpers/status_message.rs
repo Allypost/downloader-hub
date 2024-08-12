@@ -37,6 +37,7 @@ impl StatusMessage {
     pub async fn send_additional_message(&self, text: &str) -> Result<(), teloxide::RequestError> {
         let send_result = TelegramBot::instance()
             .send_message(self.chat_id, text)
+            .disable_notification(true)
             .reply_to_message_id(self.msg_id)
             .allow_sending_without_reply(true)
             .await;
@@ -72,6 +73,7 @@ impl StatusMessage {
                 None => {
                     let status_msg = TelegramBot::instance()
                         .send_message(self.chat_id, text)
+                        .disable_notification(true)
                         .reply_to_message_id(self.msg_id)
                         .allow_sending_without_reply(true)
                         .await;
