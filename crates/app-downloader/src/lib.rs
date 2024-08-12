@@ -1,5 +1,3 @@
-use std::env;
-
 use app_logger::{debug, info};
 use downloaders::{DownloadFileRequest, DownloadResult, DownloaderReturn};
 pub use handler::default_download_handlers;
@@ -13,14 +11,6 @@ pub mod handler;
 
 pub fn download_file(file: &DownloadFileRequest) -> DownloaderReturn {
     info!(?file, "Downloading file");
-
-    if let Err(e) = env::set_current_dir(&file.download_dir) {
-        return vec![Err(format!(
-            "Could not set download directory to {dir:?}: {err}",
-            dir = file.download_dir,
-            err = e,
-        ))];
-    }
 
     let new_file_paths = download_file_with(&DEFAULT_DOWNLOAD_HANDLERS, file);
 
