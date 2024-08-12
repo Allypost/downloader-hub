@@ -8,6 +8,8 @@ pub enum FixerError {
     CommandError(#[from] crate::common::command::CmdError),
     #[error(transparent)]
     FailedFix(Box<dyn std::error::Error + Send + Sync>),
+    #[error("Failed to resolve path {0:?}: {1:?}")]
+    FailedToResolvePath(PathBuf, #[source] std::io::Error),
     #[error("Failed to canonicalize path {0:?}: {1:?}")]
     FailedToCanonicalizePath(PathBuf, #[source] std::io::Error),
     #[error(transparent)]

@@ -22,9 +22,10 @@ pub async fn fix_file(path: &Path) -> FixerReturn {
 pub async fn fix_file_with(fixers: Vec<FixerInstance>, path: &Path) -> FixerReturn {
     let p = path
         .try_resolve()
-        .map_err(|e| FixerError::FailedToCanonicalizePath(path.to_path_buf(), e))?
+        .map_err(|e| FixerError::FailedToResolvePath(path.to_path_buf(), e))?;
+    let p = p
         .canonicalize()
-        .map_err(|e| FixerError::FailedToCanonicalizePath(path.to_path_buf(), e))?;
+        .map_err(|e| FixerError::FailedToCanonicalizePath(p.to_path_buf(), e))?;
 
     if !p.exists() {
         return Err(FixerError::FileNotFound(p));
