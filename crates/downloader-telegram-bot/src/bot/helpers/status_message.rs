@@ -34,30 +34,18 @@ impl StatusMessage {
         Self::new(msg.chat.id, msg.id)
     }
 
-    pub async fn send_new_message(
-        &mut self,
-        text: &str,
-        use_as_new_status_message: bool,
-    ) -> Result<(), teloxide::RequestError> {
-        let status_msg = TelegramBot::instance()
+    pub async fn send_additional_message(&self, text: &str) -> Result<(), teloxide::RequestError> {
+        let send_result = TelegramBot::instance()
             .send_message(self.chat_id, text)
             .reply_to_message_id(self.msg_id)
             .allow_sending_without_reply(true)
             .await;
 
-        let status_msg = match status_msg {
-            Ok(msg) => msg,
-            Err(e) => {
-                tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-                return Err(e);
-            }
-        };
-
-        if use_as_new_status_message {
-            self.reply_msg_id = Some(status_msg.id);
+        if send_result.is_err() {
+            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
         }
 
-        Ok(())
+        send_result.map(|_| ())
     }
 
     pub async fn update_message(&mut self, text: &str) -> Result<(), teloxide::RequestError> {

@@ -96,7 +96,7 @@ impl Handler for DownloadRequestHandler {
         let (fixed_file_paths, msg_to_send) = fix_files(&paths_to_fix).await?;
 
         if let Some(msg) = msg_to_send {
-            task.send_new_status_message(&msg, false).await;
+            task.send_additional_status_message(&msg).await;
         }
         debug!("Fixed files");
         trace!(?fixed_file_paths, "Fixed files");
@@ -199,7 +199,7 @@ async fn send_files_to_telegram(
         trace!(msg = ?failed_files_msg, "Failed files message generated");
 
         trace!("Sending failed files message");
-        task.send_new_status_message(failed_files_msg.trim(), false)
+        task.send_additional_status_message(failed_files_msg.trim())
             .await;
         trace!("Failed files message sent");
     }
@@ -490,7 +490,7 @@ async fn download_files_from_urls(
                         .join("\n"),
                 );
 
-                task.send_new_status_message(&text, false).await;
+                task.send_additional_status_message(&text).await;
             }
 
             let paths = url_results

@@ -52,10 +52,9 @@ impl Task {
         .await;
     }
 
-    pub async fn send_new_status_message(&self, text: &str, use_as_new_status_message: bool) {
+    pub async fn send_additional_status_message(&self, text: &str) {
         try_and_warn(
-            self.status_message()
-                .send_new_message(text, use_as_new_status_message),
+            self.status_message().send_additional_message(text),
             "Failed to send new status message",
         )
         .await;
