@@ -1,9 +1,7 @@
 use std::{
-    ffi::OsString,
     fs,
     path::{Path, PathBuf},
     process,
-    str::FromStr,
 };
 
 use anyhow::anyhow;
@@ -62,17 +60,25 @@ fn check_and_fix_file(file_path: &Path) -> Result<PathBuf, MediaFormatsError> {
         file_format_info = file_format_info
     );
 
-    let file_image_stream = file_format_info
-        .streams
-        .iter()
-        .find(|s| {
+    let file_media_stream = {
+        let file_image_stream = file_format_info.streams.iter().find(|s| {
             s.codec_type
                 .as_deref()
                 .is_some_and(|codec| matches!(codec, "video" | "image"))
-        })
-        .ok_or_else(|| MediaFormatsError::NoImageStream(file_path.to_path_buf()))?;
+        });
 
-    let file_stream_codec = file_image_stream
+        file_image_stream
+            .or_else(|| {
+                file_format_info.streams.iter().find(|s| {
+                    s.codec_type
+                        .as_deref()
+                        .is_some_and(|codec| codec == "audio")
+                })
+            })
+            .ok_or_else(|| MediaFormatsError::NoMediaStream(file_path.to_path_buf()))?
+    };
+
+    let file_stream_codec = file_media_stream
         .codec_name
         .as_deref()
         .ok_or_else(|| MediaFormatsError::CodecName(file_path.to_path_buf()))?;
@@ -84,11 +90,11 @@ fn check_and_fix_file(file_path: &Path) -> Result<PathBuf, MediaFormatsError> {
 
     let handler = CODEC_HANDLERS
         .iter()
-        .find(|h| (h.can_handle)(file_stream_codec));
+        .find(|h| (h.can_handle)(file_stream_codec, file_media_stream));
 
     if let Some(handler) = handler {
         trace!("Using handler: {handler:?}", handler = handler);
-        return (handler.handle)(&file_format_info, file_image_stream)
+        return (handler.handle)(&file_format_info, file_media_stream)
             .map_err(MediaFormatsError::CodecFix);
     }
 
@@ -102,18 +108,22 @@ fn check_and_fix_file(file_path: &Path) -> Result<PathBuf, MediaFormatsError> {
 #[derive(Debug, Clone, PartialEq, Default)]
 struct TranscodeInfo {
     extension: &'static str,
-    video_codec: &'static str,
+    video_codec: Option<&'static str>,
     audio_codec: Option<&'static str>,
     additional_args: Vec<&'static str>,
 }
 
 impl TranscodeInfo {
-    fn new(extension: &'static str, video_codec: &'static str) -> Self {
+    fn new(extension: &'static str) -> Self {
         Self {
             extension,
-            video_codec,
             ..Default::default()
         }
+    }
+
+    const fn with_video_codec(mut self, video_codec: &'static str) -> Self {
+        self.video_codec = Some(video_codec);
+        self
     }
 
     const fn with_audio_codec(mut self, audio_codec: &'static str) -> Self {
@@ -121,22 +131,47 @@ impl TranscodeInfo {
         self
     }
 
+    fn with_additional_args<I>(mut self, args: I) -> Self
+    where
+        I: IntoIterator<Item = &'static str>,
+    {
+        self.additional_args.extend(args);
+        self
+    }
+
     // Default codecs
 
+    fn mp3() -> Self {
+        Self::new("mp3").with_audio_codec("mp3")
+    }
+
     fn mp4() -> Self {
-        Self::new("mp4", "libx264").with_audio_codec("aac")
+        Self::new("mp4")
+            .with_video_codec("libx264")
+            .with_audio_codec("aac")
+            .with_additional_args(["-map_metadata", "-1"])
     }
 
     fn jpg() -> Self {
-        Self::new("jpg", "mjpeg")
+        Self::new("jpg")
+            .with_video_codec("mjpeg")
+            .with_additional_args(["-map_metadata", "-1"])
     }
 
     fn png() -> Self {
-        Self::new("png", "png")
+        Self::new("png")
+            .with_video_codec("png")
+            .with_additional_args(["-map_metadata", "-1"])
     }
 }
 
 fn transcode_media_into(from_path: &Path, to_format: &TranscodeInfo) -> anyhow::Result<PathBuf> {
+    trace!(
+        "Transcoding {from:?} with {format:?}",
+        from = from_path,
+        format = to_format,
+    );
+
     let to_extension = to_format.extension;
 
     let cache_folder = TempDir::absolute(
@@ -178,20 +213,22 @@ fn transcode_media_into(from_path: &Path, to_format: &TranscodeInfo) -> anyhow::
         .arg("-y")
         .arg("-hide_banner")
         .args(["-loglevel", "panic"])
-        .args([
-            OsString::from_str("-i").unwrap_or_default(),
-            cache_from_path.into_os_string(),
-        ])
+        .arg("-i")
+        .arg(&cache_from_path)
         .args(["-max_muxing_queue_size", "1024"])
         .args(["-vf", "scale=ceil(iw/2)*2:ceil(ih/2)*2"])
-        .args(["-ab", "320k"])
-        .args(["-map_metadata", "-1"])
-        .args(["-preset", "slow"])
-        .args(["-c:v", to_format.video_codec]);
+        .args(["-b:a", "256k"])
+        .args(["-preset", "slow"]);
+
+    if let Some(video_codec) = to_format.video_codec {
+        cmd = cmd.args(["-c:v", video_codec]);
+    }
 
     if let Some(audio_codec) = to_format.audio_codec {
         cmd = cmd.args(["-c:a", audio_codec]);
     }
+
+    cmd = cmd.args(&to_format.additional_args);
 
     let cmd = cmd.arg(&cache_to_path);
     debug!("Running `ffmpeg' command: {cmd:?}");
@@ -301,13 +338,35 @@ fn get_stream_of_type<'a>(
 
 #[derive(Debug, Clone, PartialEq)]
 struct CodecHandler {
-    pub can_handle: fn(&str) -> bool,
+    pub can_handle: fn(&str, &Stream) -> bool,
     pub handle: fn(&FfProbeResult, &Stream) -> anyhow::Result<PathBuf>,
 }
 
 const CODEC_HANDLERS: &[CodecHandler] = &[
     CodecHandler {
-        can_handle: |codec| matches!(codec, "h264"),
+        can_handle: |codec, _stream| matches!(codec, "mp3"),
+        handle: |file_format_info, _matched_stream| {
+            let from_path = PathBuf::from(file_format_info.format.filename.clone());
+
+            trace!(
+                "File {path:?} is already in preferred format",
+                path = from_path
+            );
+
+            Ok(from_path)
+        },
+    },
+    CodecHandler {
+        can_handle: |codec, stream| {
+            matches!(stream.codec_type.as_deref(), Some("audio")) && !matches!(codec, "mp3")
+        },
+        handle: |file_format_info, _matched_stream| {
+            let file_path = PathBuf::from(file_format_info.format.filename.clone());
+            transcode_media_into(&file_path, &TranscodeInfo::mp3())
+        },
+    },
+    CodecHandler {
+        can_handle: |codec, _stream| matches!(codec, "h264"),
         handle: |file_format_info, video_stream| {
             let file_path = PathBuf::from(file_format_info.format.filename.clone());
 
@@ -347,7 +406,7 @@ const CODEC_HANDLERS: &[CodecHandler] = &[
         },
     },
     CodecHandler {
-        can_handle: |codec| matches!(codec, "mpeg4" | "vp8" | "vp9" | "av1" | "hevc"),
+        can_handle: |codec, _stream| matches!(codec, "mpeg4" | "vp8" | "vp9" | "av1" | "hevc"),
         handle: |file_format_info, _matched_stream| {
             let from_path = PathBuf::from(file_format_info.format.filename.clone());
             trace!("Converting {path:?} into mp4", path = from_path);
@@ -355,7 +414,7 @@ const CODEC_HANDLERS: &[CodecHandler] = &[
         },
     },
     CodecHandler {
-        can_handle: |codec| matches!(codec, "png" | "mjpeg" | "gif"),
+        can_handle: |codec, _stream| matches!(codec, "png" | "mjpeg" | "gif"),
         handle: |file_format_info, _matched_stream| {
             let from_path = PathBuf::from(file_format_info.format.filename.clone());
 
@@ -368,7 +427,7 @@ const CODEC_HANDLERS: &[CodecHandler] = &[
         },
     },
     CodecHandler {
-        can_handle: |codec| matches!(codec, "webp"),
+        can_handle: |codec, _stream| matches!(codec, "webp"),
         handle: |file_format_info, _matched_stream| {
             let from_path = PathBuf::from(file_format_info.format.filename.clone());
             let img = image::open(&from_path)?;
@@ -406,8 +465,8 @@ const CODEC_HANDLERS: &[CodecHandler] = &[
 pub enum MediaFormatsError {
     #[error(transparent)]
     FfProbeError(#[from] ffprobe::FfProbeError),
-    #[error("Failed to get image stream of {0:?}")]
-    NoImageStream(PathBuf),
+    #[error("Failed to get media stream of {0:?}")]
+    NoMediaStream(PathBuf),
     #[error("Failed to get codec of {0:?}")]
     CodecName(PathBuf),
     #[error(transparent)]
