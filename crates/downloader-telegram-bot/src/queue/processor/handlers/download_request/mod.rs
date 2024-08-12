@@ -288,12 +288,17 @@ async fn download_files(
             .await;
 
         trace!(?file_urls, "Downloading files from URLs");
-        let files_to_download = download_files_from_urls(task, msg, download_dir)
-            .await
-            .map_err(HandlerError::Fatal)?;
-        trace!(?files_to_download, "Downloaded files from URLs");
 
-        paths_to_fix.extend(files_to_download);
+        let (downloaded_file_paths, download_errors) =
+            download_files_from_urls(&file_urls, download_dir).await;
+
+        for error in download_errors {
+            task.send_additional_status_message(&error).await;
+        }
+
+        trace!(?downloaded_file_paths, "Downloaded files from URLs");
+
+        paths_to_fix.extend(downloaded_file_paths);
     }
 
     Ok(paths_to_fix)
@@ -421,88 +426,60 @@ async fn chunk_files_by_size(
 
 #[tracing::instrument(skip_all, fields(download_dir))]
 async fn download_files_from_urls(
-    task: &Task,
-    msg: &Message,
+    file_urls: &[Url],
     download_dir: &Path,
-) -> Result<Vec<PathBuf>, String> {
-    let file_id = file_id_from_message(msg);
-    let file_urls = file_urls_from_message(msg);
+) -> (Vec<PathBuf>, Vec<String>) {
+    let results = {
+        let futs = file_urls.iter().map(|url| {
+            let temp_download_dir = download_dir.to_path_buf();
+            let url = url.to_string();
 
-    if file_id.is_none() && file_urls.is_empty() {
-        debug!("No supported URL or file found in message");
+            tokio::task::spawn_blocking(move || {
+                let dl_req =
+                    app_downloader::downloaders::DownloadFileRequest::new(&url, &temp_download_dir);
 
-        return Ok(vec![]);
-    }
+                (url, app_downloader::download_file(&dl_req))
+            })
+        });
 
-    let mut paths_to_fix = vec![];
+        futures::future::join_all(futs)
+            .await
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>()
+    };
 
-    if let Some(file_id) = file_id {
-        task.update_status_message("Downloading file from Telegram...")
-            .await;
+    let mut downloaded_paths = vec![];
+    let mut errors = vec![];
+    for (url, url_results) in &results {
+        let errs = url_results
+            .iter()
+            .filter_map(|x| x.as_ref().err())
+            .collect::<Vec<_>>();
 
-        let download_file_path = download_file_by_id(&file_id, download_dir).await?;
+        if !errs.is_empty() {
+            let text = format!(
+                "Failed to download file from URL: {url}\n\nErrors:\n{errs}",
+                url = url,
+                errs = errs
+                    .iter()
+                    .map(|x| format!("- {err}", err = x))
+                    .collect::<Vec<_>>()
+                    .join("\n"),
+            );
 
-        paths_to_fix.push(download_file_path);
-    }
-
-    if !file_urls.is_empty() {
-        task.update_status_message("Downloading files from URLs...")
-            .await;
-
-        let results = {
-            let futs = file_urls.into_iter().map(|url| {
-                let temp_download_dir = download_dir.to_path_buf();
-
-                tokio::task::spawn_blocking(move || {
-                    (
-                        url.to_string(),
-                        app_downloader::download_file(
-                            &app_downloader::downloaders::DownloadFileRequest::new(
-                                url.as_str(),
-                                &temp_download_dir,
-                            ),
-                        ),
-                    )
-                })
-            });
-
-            futures::future::join_all(futs)
-                .await
-                .into_iter()
-                .flatten()
-                .collect::<Vec<_>>()
-        };
-
-        for (url, url_results) in &results {
-            let errs = url_results
-                .iter()
-                .filter_map(|x| x.as_ref().err())
-                .collect::<Vec<_>>();
-
-            if !errs.is_empty() {
-                let text = format!(
-                    "Failed to download file from URL: {url}\n\nErrors:\n{errs}",
-                    url = url,
-                    errs = errs
-                        .iter()
-                        .map(|x| format!("- {err}", err = x))
-                        .collect::<Vec<_>>()
-                        .join("\n"),
-                );
-
-                task.send_additional_status_message(&text).await;
-            }
-
-            let paths = url_results
-                .iter()
-                .filter_map(|x| x.as_ref().ok())
-                .map(|x| x.path.clone());
-
-            paths_to_fix.extend(paths);
+            errors.push(text);
         }
+
+        let paths = url_results
+            .iter()
+            .filter_map(|x| x.as_ref().ok())
+            .map(|x| x.path.clone());
+
+        downloaded_paths.extend(paths);
     }
 
-    Ok(paths_to_fix)
+    (downloaded_paths, errors)
 }
 
 fn file_id_from_message(msg: &Message) -> Option<String> {
