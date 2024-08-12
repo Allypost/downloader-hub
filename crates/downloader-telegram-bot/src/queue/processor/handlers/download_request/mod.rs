@@ -1,10 +1,16 @@
 use std::{
+    collections::HashMap,
+    fs::Metadata,
     path::{Path, PathBuf},
     sync::Arc,
 };
 
 use app_config::Config;
-use app_helpers::{file_type::infer_file_type, id::time_thread_id, temp_dir::TempDir};
+use app_helpers::{
+    file_type::{infer_file_type, mime},
+    id::time_thread_id,
+    temp_dir::TempDir,
+};
 use app_logger::{debug, info, trace};
 use parking_lot::Mutex;
 use teloxide::{
@@ -12,9 +18,8 @@ use teloxide::{
     payloads::SendMediaGroupSetters,
     prelude::{Request, Requester},
     types::{
-        InputFile, InputMedia, InputMediaAnimation, InputMediaAudio, InputMediaDocument,
-        InputMediaPhoto, InputMediaVideo, MediaKind, Message, MessageEntityKind, MessageKind,
-        PhotoSize,
+        InputFile, InputMedia, InputMediaAudio, InputMediaDocument, InputMediaPhoto,
+        InputMediaVideo, MediaKind, Message, MessageEntityKind, MessageKind, PhotoSize,
     },
 };
 use tokio::fs::File;
@@ -153,15 +158,13 @@ async fn send_files_to_telegram(
     fixed_file_paths: Vec<PathBuf>,
 ) -> Result<(), HandlerError> {
     trace!("Chunking files by size");
-    let (file_groups, failed_files) =
-        chunk_files_by_size(fixed_file_paths, MAX_PAYLOAD_SIZE / 10 * 8).await;
-    trace!(?file_groups, ?failed_files, "Chunked files by size");
+    let (media_groups, failed_files) =
+        files_to_input_media_groups(fixed_file_paths, MAX_PAYLOAD_SIZE / 10 * 8).await;
+    trace!(?media_groups, ?failed_files, "Chunked files by size");
 
     debug!("Uploading files to Telegram");
-    for file_group in file_groups {
-        trace!(?file_group, "Uploading file group");
-
-        let media_group = files_to_input_media(&file_group).await;
+    for media_group in media_groups {
+        trace!(?media_group, "Uploading media group");
 
         TelegramBot::instance()
             .send_media_group(task.status_message().chat_id(), media_group)
@@ -171,7 +174,7 @@ async fn send_files_to_telegram(
             .await
             .map_err(|x| HandlerError::Fatal(x.to_string()))?;
 
-        trace!(?file_group, "Uploaded file group");
+        trace!("Uploaded media group");
     }
     debug!("Uploaded files to Telegram");
 
@@ -304,21 +307,110 @@ async fn download_files(
     Ok(paths_to_fix)
 }
 
-async fn files_to_input_media<TFiles, TFile>(files: TFiles) -> Vec<InputMedia>
+#[tracing::instrument(skip_all)]
+async fn files_to_input_media_groups<TFiles, TFile>(
+    files: TFiles,
+    max_size: u64,
+) -> (Vec<Vec<InputMedia>>, Vec<(PathBuf, String)>)
 where
-    TFiles: IntoIterator<Item = TFile> + Send,
+    TFiles: IntoIterator<Item = TFile> + Send + std::fmt::Debug,
     TFile: AsRef<Path> + Into<PathBuf> + Clone,
 {
-    let file_types = {
+    #[derive(Debug)]
+    struct FileInfo {
+        path: PathBuf,
+        metadata: Metadata,
+        mime: Option<mime::Mime>,
+    }
+
+    #[derive(Debug)]
+    struct FileInfoWithMedia {
+        file_info: FileInfo,
+        media: InputMedia,
+    }
+
+    fn chunk(
+        items: Vec<FileInfoWithMedia>,
+        max_size: u64,
+    ) -> (Vec<Vec<FileInfoWithMedia>>, Vec<(PathBuf, String)>) {
+        let mut failed = vec![];
+        let mut res = vec![];
+        let mut res_size = 0_u64;
+        let mut res_item = vec![];
+        for item in items {
+            let path = item.file_info.path.clone();
+            let size = item.file_info.metadata.len();
+
+            if res_item.len() >= 10 {
+                res.push(res_item);
+                res_item = vec![];
+                res_size = 0;
+            }
+
+            if size > max_size {
+                trace!(?path, ?size, ?max_size, "File is too large");
+                {
+                    failed.push((path, format!("file is too large: {} > {}", size, max_size)));
+                }
+                continue;
+            }
+
+            if size + res_size > MAX_PAYLOAD_SIZE {
+                res.push(res_item);
+                res_size = 0;
+                res_item = vec![];
+            }
+
+            res_item.push(item);
+            res_size += size;
+        }
+
+        if !res_item.is_empty() {
+            res.push(res_item);
+        }
+
+        (res, failed)
+    }
+
+    let failed = Arc::new(Mutex::new(Vec::new()));
+    trace!(?files, "Getting file infos");
+    let file_info = {
         let futs = files
             .into_iter()
             .map(|x| x.as_ref().to_path_buf())
             .map(|file_path| {
-                tokio::task::spawn_blocking(|| {
-                    let mime = infer_file_type(&file_path).ok();
+                let failed = failed.clone();
 
-                    (file_path, mime)
-                })
+                async move {
+                    let mime = {
+                        let file_path = file_path.clone();
+
+                        tokio::task::spawn_blocking(move || infer_file_type(&file_path).ok())
+                            .await
+                            .ok()?
+                    };
+
+                    let metadata = match tokio::fs::metadata(&file_path).await {
+                        Ok(meta) => Some(meta),
+                        Err(e) => {
+                            trace!(?e, "Failed to get metadata for file");
+                            {
+                                failed.lock().push((
+                                    file_path.clone(),
+                                    "failed to get metadata for file".to_string(),
+                                ));
+                            }
+
+                            None
+                        }
+                    }?;
+
+                    Some(FileInfo {
+                        path: file_path,
+                        mime,
+                        metadata,
+                    })
+                }
             });
 
         futures::future::join_all(futs)
@@ -327,93 +419,76 @@ where
             .flatten()
             .collect::<Vec<_>>()
     };
+    trace!(?file_info, "Got file infos");
 
-    file_types
-        .into_iter()
-        .map(|(file_path, file_mime)| {
-            let input_file = InputFile::file(file_path);
+    trace!("Converting to media files");
+    let media_files = file_info.into_iter().map(|file_info| {
+        let input_file = InputFile::file(file_info.path.clone());
 
-            // Handle the GIFs as animations because Telegram
-            // Optional todo: Also handle silent videos as animations
-            if file_mime
-                .as_ref()
-                .is_some_and(|x| x.essence_str() == "image/gif")
-            {
-                return InputMedia::Animation(InputMediaAnimation::new(input_file));
+        // Handle the GIFs as animations because Telegram
+        // Optional todo: Also handle silent videos as animations
+        if file_info
+            .mime
+            .as_ref()
+            .is_some_and(|x| x.essence_str() == "image/gif")
+        {
+            return FileInfoWithMedia {
+                file_info,
+                media: InputMedia::Document(InputMediaDocument::new(input_file)),
+            };
+        }
+
+        let file_type = file_info
+            .mime
+            .as_ref()
+            .map(|f| f.type_().as_str().to_lowercase());
+        let media = match file_type.as_deref() {
+            Some("audio") => InputMedia::Audio(InputMediaAudio::new(input_file)),
+            Some("image") => InputMedia::Photo(InputMediaPhoto::new(input_file)),
+            Some("video") => InputMedia::Video(InputMediaVideo::new(input_file)),
+            _ => InputMedia::Document(InputMediaDocument::new(input_file)),
+        };
+
+        FileInfoWithMedia { file_info, media }
+    });
+    trace!(?media_files, "Converted to media files");
+
+    let chunkable_groups = {
+        #[derive(Debug, Eq, PartialEq, Hash)]
+        enum ChunkGroup {
+            Document,
+            Audio,
+            Other,
+        }
+
+        let mut groups: HashMap<ChunkGroup, Vec<FileInfoWithMedia>> = HashMap::new();
+        for f in media_files {
+            let group_name = match f.media {
+                InputMedia::Audio(_) => ChunkGroup::Audio,
+                InputMedia::Document(_) => ChunkGroup::Document,
+                _ => ChunkGroup::Other,
+            };
+
+            if let Some(group) = groups.get_mut(&group_name) {
+                group.push(f);
+            } else {
+                groups.insert(group_name, vec![f]);
             }
+        }
 
-            let file_type = file_mime.map(|f| f.type_().as_str().to_lowercase());
-            match file_type.as_deref() {
-                Some("audio") => InputMedia::Audio(InputMediaAudio::new(input_file)),
-                Some("image") => InputMedia::Photo(InputMediaPhoto::new(input_file)),
-                Some("video") => InputMedia::Video(InputMediaVideo::new(input_file)),
-                _ => InputMedia::Document(InputMediaDocument::new(input_file)),
-            }
-        })
-        .collect::<Vec<_>>()
-}
-
-#[tracing::instrument(skip_all)]
-async fn chunk_files_by_size(
-    files: Vec<PathBuf>,
-    max_size: u64,
-) -> (Vec<Vec<PathBuf>>, Vec<(PathBuf, String)>) {
-    trace!("Calculating file groupings");
-    let failed = Arc::new(Mutex::new(Vec::new()));
-    let metadatas = {
-        let m = files.into_iter().map(|x| {
-            let failed = failed.clone();
-
-            async move {
-                let meta = match tokio::fs::metadata(&x).await {
-                    Ok(meta) => meta,
-                    Err(e) => {
-                        trace!(?e, "Failed to get metadata for file");
-                        {
-                            failed
-                                .lock()
-                                .push((x, "failed to get metadata for file".to_string()));
-                        }
-                        return None;
-                    }
-                };
-
-                Some((x, meta.len()))
-            }
-        });
-
-        futures::future::join_all(m)
-            .await
-            .into_iter()
-            .flatten()
-            .collect::<Vec<_>>()
+        groups.into_values().collect::<Vec<_>>()
     };
+    trace!(?chunkable_groups, "Partitioned files");
 
     let mut res = vec![];
-    let mut res_size = 0_u64;
-    let mut res_item = vec![];
-    for (path, size) in metadatas {
-        if size > max_size {
-            trace!(?path, ?size, ?max_size, "File is too large");
-            {
-                failed
-                    .lock()
-                    .push((path, format!("file is too large: {} > {}", size, max_size)));
-            }
-            continue;
-        }
-
-        if size + res_size > max_size {
-            res.push(res_item.clone());
-            res_size = 0;
-            res_item = vec![];
-        }
-
-        res_item.push(path);
-        res_size += size;
-    }
-    if !res_item.is_empty() {
-        res.push(res_item);
+    for group in chunkable_groups {
+        let (chunks, failed_inner) = chunk(group, max_size);
+        failed.lock().extend(failed_inner);
+        res.extend(
+            chunks
+                .into_iter()
+                .map(|x| x.into_iter().map(|x| x.media).collect()),
+        );
     }
     trace!(?res, "Got file groupings");
 

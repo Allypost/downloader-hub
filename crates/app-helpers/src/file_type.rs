@@ -2,6 +2,7 @@ use std::{path::Path, str::FromStr};
 
 use file_format::FileFormat;
 use infer::get_from_path as infer_from_path;
+pub use mime;
 use mime::Mime;
 use tree_magic_mini::from_filepath as magic_infer_from_filepath;
 
