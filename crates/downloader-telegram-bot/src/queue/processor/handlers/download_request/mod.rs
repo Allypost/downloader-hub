@@ -12,8 +12,9 @@ use teloxide::{
     payloads::SendMediaGroupSetters,
     prelude::{Request, Requester},
     types::{
-        InputFile, InputMedia, InputMediaAudio, InputMediaDocument, InputMediaPhoto,
-        InputMediaVideo, MediaKind, Message, MessageEntityKind, MessageKind, PhotoSize,
+        InputFile, InputMedia, InputMediaAnimation, InputMediaAudio, InputMediaDocument,
+        InputMediaPhoto, InputMediaVideo, MediaKind, Message, MessageEntityKind, MessageKind,
+        PhotoSize,
     },
 };
 use tokio::fs::File;
@@ -309,8 +310,7 @@ where
             .map(|x| x.as_ref().to_path_buf())
             .map(|file_path| {
                 tokio::task::spawn_blocking(|| {
-                    let mime = infer_file_type(&file_path)
-                        .map_or(None, |f| Some(f.type_().as_str().to_lowercase()));
+                    let mime = infer_file_type(&file_path).ok();
 
                     (file_path, mime)
                 })
@@ -325,9 +325,19 @@ where
 
     file_types
         .into_iter()
-        .map(|(file_path, file_type)| {
+        .map(|(file_path, file_mime)| {
             let input_file = InputFile::file(file_path);
 
+            // Handle the GIFs as animations because Telegram
+            // Optional todo: Also handle silent videos as animations
+            if file_mime
+                .as_ref()
+                .is_some_and(|x| x.essence_str() == "image/gif")
+            {
+                return InputMedia::Animation(InputMediaAnimation::new(input_file));
+            }
+
+            let file_type = file_mime.map(|f| f.type_().as_str().to_lowercase());
             match file_type.as_deref() {
                 Some("audio") => InputMedia::Audio(InputMediaAudio::new(input_file)),
                 Some("image") => InputMedia::Photo(InputMediaPhoto::new(input_file)),
