@@ -36,6 +36,8 @@ http-serde = "2.1.1"
 http = "1.1.0"
 form_urlencoded = "1.2.1"
 tracing.workspace = true
+anyhow.workspace = true
+zip = { version = "2.1.6", default-features = false, features = ["aes-crypto", "deflate", "deflate64", "lzma", "time", "zstd"] }
 
 [lints]
 workspace = true

@@ -3,8 +3,9 @@ use once_cell::sync::Lazy;
 use crate::{
     downloaders::{
         generic::GenericDownloader, imgur::ImgurDownloader, instagram::InstagramDownloader,
-        mastodon::MastodonDownloader, reddit::RedditDownloader, tiktok::TiktokDownloader,
-        tumblr::TumblrDownloader, twitter::TwitterDownloader, yt_dlp::YtDlpDownloader, Downloader,
+        mastodon::MastodonDownloader, music::MusicDownloader, reddit::RedditDownloader,
+        tiktok::TiktokDownloader, tumblr::TumblrDownloader, twitter::TwitterDownloader,
+        yt_dlp::YtDlpDownloader, Downloader,
     },
     DownloadFileRequest, DownloaderReturn,
 };
@@ -63,6 +64,7 @@ pub fn default_download_handlers() -> Vec<DownloadHandler> {
         DownloadHandler::new(ImgurDownloader::is_media_url, ImgurDownloader),
         DownloadHandler::new(ImgurDownloader::is_post_url, ImgurDownloader),
         DownloadHandler::new(TiktokDownloader::is_post_url, TiktokDownloader),
+        DownloadHandler::new(MusicDownloader::supports, MusicDownloader),
         DownloadHandler::new(MastodonDownloader::is_mastodon_toot, MastodonDownloader),
         DownloadHandler::new(|_| true, YtDlpDownloader),
     ]

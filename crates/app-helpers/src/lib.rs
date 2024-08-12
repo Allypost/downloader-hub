@@ -1,4 +1,5 @@
 pub mod dirs;
+pub mod domain;
 pub mod encoding;
 pub mod ffprobe;
 pub mod file_type;

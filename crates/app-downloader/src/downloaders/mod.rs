@@ -13,6 +13,7 @@ pub mod generic;
 pub mod imgur;
 pub mod instagram;
 pub mod mastodon;
+pub mod music;
 pub mod reddit;
 pub mod tiktok;
 pub mod tumblr;
