@@ -1,4 +1,5 @@
 use app_config::Config;
+use app_tasks::TaskRunner;
 
 use crate::{
     db::AppDb,
@@ -36,7 +37,7 @@ async fn main() {
     TaskQueue::init().await.expect("Failed to initialize queue");
 
     tokio::task::spawn(TaskQueueProcessor::run());
-    tokio::task::spawn(app_tasks::start());
+    tokio::task::spawn(TaskRunner::run());
 
     server::run().await.expect("Failed to run server");
 }

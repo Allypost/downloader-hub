@@ -3,6 +3,7 @@ pub(crate) mod queue;
 
 use app_config::Config;
 use app_logger::{debug, error};
+use app_tasks::TaskRunner;
 use queue::TaskQueueProcessor;
 
 #[tokio::main]
@@ -27,7 +28,7 @@ async fn main() {
     debug!(config = ?*Config::global(), "Running with config");
 
     tokio::task::spawn(TaskQueueProcessor::run());
-    tokio::task::spawn(app_tasks::start());
+    tokio::task::spawn(TaskRunner::run());
 
     bot::run().await.expect("Failed to run server");
 }
