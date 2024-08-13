@@ -1,5 +1,12 @@
 # Downloader Hub
 
+[![Build Status](https://drone.allypost.net/api/badges/Allypost/downloader-hub/status.svg)](https://drone.allypost.net/Allypost/downloader-hub)
+
+Downloader Hub: [![Downloader Hub Image Size](https://img.shields.io/docker/image-size/allypost/downloader-hub)](https://hub.docker.com/r/allypost/downloader-hub)
+
+Telegram Bot: [![Downloader Telegram Bot Image Size](https://img.shields.io/docker/image-size/allypost/downloader-telegram-bot)](https://hub.docker.com/r/allypost/downloader-telegram-bot)
+
+
 A simple hub to allow clients to download files from various sources.
 
 Downloaded files are also processed and converted to standard formats.
