@@ -46,7 +46,7 @@ impl Downloader for TwitterDownloader {
     }
 
     fn description(&self) -> &'static str {
-        "Downloads images and videos from Twitter/X and many ActivityPub instances. Also screenshots the tweet/post."
+        "Downloads images and videos from Twitter/X. Also screenshots the tweet/post."
     }
 
     #[app_logger::instrument]
@@ -132,7 +132,13 @@ impl TwitterDownloader {
     pub fn screenshot_tweet_url(&self, url: &str) -> String {
         let endpoint = &Config::global().endpoint.twitter_screenshot_base_url;
 
-        format!("{}/{}", endpoint.trim_end_matches('/'), url)
+        format!(
+            "{}/{}",
+            endpoint.trim_end_matches('/'),
+            form_urlencoded::Serializer::new(String::new())
+                .append_key_only(url)
+                .finish(),
+        )
     }
 
     pub fn screenshot_tweet(

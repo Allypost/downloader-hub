@@ -12,10 +12,10 @@ use http::{
 };
 use serde::{Deserialize, Serialize};
 
+pub mod activity_pub;
 pub mod generic;
 pub mod imgur;
 pub mod instagram;
-pub mod mastodon;
 pub mod music;
 pub mod reddit;
 pub mod tiktok;
@@ -50,7 +50,7 @@ pub trait Downloader: Debug + Send + Sync {
         self.download_resolved(&resolved)
     }
 
-    fn download_resolved(&self, resolved_file: &ResolvedDownloadFileRequest) -> DownloaderReturn;
+    fn download_resolved(&self, resolved: &ResolvedDownloadFileRequest) -> DownloaderReturn;
 }
 impl std::fmt::Display for dyn Downloader {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
