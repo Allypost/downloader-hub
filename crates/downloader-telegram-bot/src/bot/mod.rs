@@ -153,7 +153,8 @@ async fn handle_command(msg: Message, command: BotCommand) -> ResponseResult<()>
                     msg.chat.id,
                     "Hello! I'm a bot that can help download your memes.\n\nJust send me a link \
                      to a funny video and I'll do the rest!\nYou can also just send or forward a \
-                     message with media and links to me and I'll fix it up for you!\n\nIf you'd like to know more use the /help or /about commands.",
+                     message with media and links to me and I'll fix it up for you!\n\nIf you'd \
+                     like to know more use the /help or /about commands.",
                 )
                 .reply_to_message_id(msg.id)
                 .allow_sending_without_reply(true)
