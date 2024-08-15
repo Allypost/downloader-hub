@@ -102,7 +102,7 @@ RUN upx --best --lzma "/app/target/${RUST_TARGET}/release/${BINARY_NAME}"
 ##
 ## Run the app in a configured environment
 ##
-FROM ubuntu:rolling as runner
+FROM ubuntu:rolling AS runner
 RUN apt-get update && apt-get install -y \
   sudo \
   curl \
