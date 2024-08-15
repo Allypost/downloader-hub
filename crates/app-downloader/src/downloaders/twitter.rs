@@ -56,7 +56,16 @@ impl Downloader for TwitterDownloader {
     ) -> Result<ResolvedDownloadFileRequest, String> {
         debug!("Downloading tweet");
 
-        let tweet_info = get_tweet_info_from_url(&req.original_url)?;
+        let tweet_info = match get_tweet_info_from_url(&req.original_url)? {
+            Some(x) => x,
+            None => {
+                let screenshot_url = self.screenshot_tweet_url(&req.original_url);
+                return Ok(ResolvedDownloadFileRequest {
+                    request_info: req.clone(),
+                    resolved_urls: vec![DownloadUrlInfo::from_url(&screenshot_url)],
+                });
+            }
+        };
 
         trace!(?tweet_info, "Got tweet info");
 
@@ -187,8 +196,14 @@ struct TweetInfo {
     status_id: String,
 }
 #[app_logger::instrument]
-fn get_tweet_info_from_url(url: &str) -> Result<TweetInfo, String> {
-    let caps = URL_MATCH.captures(url).ok_or("Invalid tweet URL")?;
+fn get_tweet_info_from_url(url: &str) -> Result<Option<TweetInfo>, String> {
+    let caps = match URL_MATCH.captures(url) {
+        Some(caps) => caps,
+        None => {
+            trace!("Not a tweet url");
+            return Ok(None);
+        }
+    };
 
     trace!(?caps, "Tweet URL match");
 
@@ -202,10 +217,10 @@ fn get_tweet_info_from_url(url: &str) -> Result<TweetInfo, String> {
         .ok_or_else(|| "Couldn't get status id from URL match".to_string())?
         .as_str();
 
-    Ok(TweetInfo {
+    Ok(Some(TweetInfo {
         username: username.to_string(),
         status_id: status_id.to_string(),
-    })
+    }))
 }
 
 #[derive(Debug)]
