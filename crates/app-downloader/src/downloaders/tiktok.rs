@@ -68,7 +68,6 @@ fn get_media_download_urls(req: &DownloadFileRequest) -> Result<Vec<DownloadUrlI
         .text()
         .map_err(|e| format!("Failed to get response body: {:?}", e))?;
     debug!("Got response body from tiktok");
-    trace!(?resp_body, "Response body");
 
     let dom = tl::parse(&resp_body, tl::ParserOptions::default())
         .map_err(|e| format!("Failed to parse response body: {:?}", e))?;
@@ -93,7 +92,7 @@ fn get_media_download_urls(req: &DownloadFileRequest) -> Result<Vec<DownloadUrlI
             e
         )
     })?;
-    trace!(?post_data, "Got post data from response body");
+    trace!("Got post data from response body");
 
     let video_data = post_data
         .get("__DEFAULT_SCOPE__")
