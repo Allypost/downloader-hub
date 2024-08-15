@@ -10,7 +10,7 @@ use super::{
     generic::GenericDownloader, twitter::TwitterDownloader, DownloadFileRequest, Downloader,
     ResolvedDownloadFileRequest,
 };
-use crate::{common::request::Client, downloaders::DownloadUrlInfo, DownloaderReturn};
+use crate::{common::request::Client, DownloaderReturn};
 
 pub static IS_NUMBERS_ONLY: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"^\d+$").expect("Invalid regex"));
@@ -40,10 +40,7 @@ impl Downloader for MastodonDownloader {
 
         trace!(?screenshot_url, "Downloading screenshot from url");
 
-        Ok(ResolvedDownloadFileRequest {
-            request_info: req.clone(),
-            resolved_urls: vec![DownloadUrlInfo::from_url(&screenshot_url)],
-        })
+        Ok(ResolvedDownloadFileRequest::from_url(req, screenshot_url))
     }
 
     fn download_resolved(&self, resolved: &ResolvedDownloadFileRequest) -> DownloaderReturn {

@@ -1,4 +1,5 @@
 use std::{
+    convert::Into,
     fmt::Debug,
     path::{Path, PathBuf},
 };
@@ -77,6 +78,35 @@ pub struct ResolvedDownloadFileRequest {
     pub request_info: DownloadFileRequest,
     pub resolved_urls: Vec<DownloadUrlInfo>,
 }
+impl ResolvedDownloadFileRequest {
+    #[must_use]
+    fn new<U, I>(req: &DownloadFileRequest, urls: U) -> Self
+    where
+        U: IntoIterator<Item = I>,
+        I: Into<DownloadUrlInfo>,
+    {
+        Self {
+            request_info: req.clone(),
+            resolved_urls: urls.into_iter().map(Into::into).collect(),
+        }
+    }
+
+    pub fn from_urls<U, I>(req: &DownloadFileRequest, urls: U) -> Self
+    where
+        U: IntoIterator<Item = I>,
+        I: Into<DownloadUrlInfo>,
+    {
+        Self::new(req, urls)
+    }
+
+    #[must_use]
+    pub fn from_url<I>(req: &DownloadFileRequest, url: I) -> Self
+    where
+        I: Into<DownloadUrlInfo>,
+    {
+        Self::from_urls(req, [url])
+    }
+}
 
 pub type ResolvedUrlHeaders = HeaderMap;
 
@@ -133,6 +163,11 @@ impl From<&str> for DownloadUrlInfo {
 impl From<String> for DownloadUrlInfo {
     fn from(url: String) -> Self {
         Self::from_url(&url)
+    }
+}
+impl From<&String> for DownloadUrlInfo {
+    fn from(url: &String) -> Self {
+        Self::from_url(url)
     }
 }
 

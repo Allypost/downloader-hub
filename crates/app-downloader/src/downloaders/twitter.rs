@@ -60,10 +60,7 @@ impl Downloader for TwitterDownloader {
             Some(x) => x,
             None => {
                 let screenshot_url = self.screenshot_tweet_url(&req.original_url);
-                return Ok(ResolvedDownloadFileRequest {
-                    request_info: req.clone(),
-                    resolved_urls: vec![DownloadUrlInfo::from_url(&screenshot_url)],
-                });
+                return Ok(ResolvedDownloadFileRequest::from_url(req, screenshot_url));
             }
         };
 
@@ -92,12 +89,10 @@ impl Downloader for TwitterDownloader {
             });
         }
 
-        let resolved_urls = tweet_media.into_iter().map(|x| x.as_url().into()).collect();
-
-        Ok(ResolvedDownloadFileRequest {
-            request_info: req.clone(),
-            resolved_urls,
-        })
+        Ok(ResolvedDownloadFileRequest::from_urls(
+            req,
+            tweet_media.into_iter().map(|x| x.to_string()),
+        ))
     }
 
     fn download_resolved(&self, resolved: &ResolvedDownloadFileRequest) -> DownloaderReturn {
@@ -326,6 +321,11 @@ impl TweetMedia {
         match self {
             Self::Photo { url } | Self::Video { url } => url,
         }
+    }
+}
+impl std::fmt::Display for TweetMedia {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.as_url().fmt(f)
     }
 }
 

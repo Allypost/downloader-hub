@@ -27,10 +27,10 @@ impl Downloader for GenericDownloader {
         &self,
         req: &DownloadFileRequest,
     ) -> Result<ResolvedDownloadFileRequest, String> {
-        Ok(ResolvedDownloadFileRequest {
-            resolved_urls: vec![DownloadUrlInfo::from_url(&req.original_url)],
-            request_info: req.clone(),
-        })
+        Ok(ResolvedDownloadFileRequest::from_url(
+            req,
+            &req.original_url,
+        ))
     }
 
     fn download_resolved(&self, resolved: &ResolvedDownloadFileRequest) -> DownloaderReturn {

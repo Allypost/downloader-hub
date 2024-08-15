@@ -27,10 +27,7 @@ impl Downloader for TiktokDownloader {
     ) -> Result<ResolvedDownloadFileRequest, String> {
         let urls = get_media_download_urls(req)?;
 
-        Ok(ResolvedDownloadFileRequest {
-            request_info: req.clone(),
-            resolved_urls: urls,
-        })
+        Ok(ResolvedDownloadFileRequest::from_urls(req, urls))
     }
 
     fn download_resolved(&self, resolved_file: &ResolvedDownloadFileRequest) -> DownloaderReturn {

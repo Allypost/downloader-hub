@@ -34,10 +34,10 @@ impl Downloader for YtDlpDownloader {
         &self,
         req: &DownloadFileRequest,
     ) -> Result<ResolvedDownloadFileRequest, String> {
-        Ok(ResolvedDownloadFileRequest {
-            request_info: req.clone(),
-            resolved_urls: vec![DownloadUrlInfo::from_url(&req.original_url)],
-        })
+        Ok(ResolvedDownloadFileRequest::from_url(
+            req,
+            &req.original_url,
+        ))
     }
 
     fn download_resolved(&self, resolved_file: &ResolvedDownloadFileRequest) -> DownloaderReturn {

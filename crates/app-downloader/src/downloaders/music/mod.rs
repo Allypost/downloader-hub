@@ -7,7 +7,7 @@ use app_logger::warn;
 use once_cell::sync::Lazy;
 use url::Url;
 
-use super::{DownloadUrlInfo, Downloader, DownloaderReturn, ResolvedDownloadFileRequest};
+use super::{Downloader, DownloaderReturn, ResolvedDownloadFileRequest};
 use crate::downloaders::DownloadResult;
 
 static HANDLERS: Lazy<Vec<DownloadHandler>> = Lazy::new(|| {
@@ -33,10 +33,10 @@ impl Downloader for MusicDownloader {
         &self,
         req: &super::DownloadFileRequest,
     ) -> Result<ResolvedDownloadFileRequest, String> {
-        Ok(ResolvedDownloadFileRequest {
-            resolved_urls: vec![DownloadUrlInfo::from_url(&req.original_url)],
-            request_info: req.clone(),
-        })
+        Ok(ResolvedDownloadFileRequest::from_url(
+            req,
+            &req.original_url,
+        ))
     }
 
     fn download_resolved(&self, resolved_file: &ResolvedDownloadFileRequest) -> DownloaderReturn {
