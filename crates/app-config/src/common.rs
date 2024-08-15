@@ -153,13 +153,11 @@ pub fn hacky_dump_completions() -> impl clap::builder::TypedValueParser {
         let parsed = Shell::from_str(s, true);
 
         if let Ok(shell) = &parsed {
-            let bin_name = if cfg!(feature = "server") {
-                "downloader-hub"
-            } else if cfg!(feature = "cli") {
-                "downloader-cli"
-            } else {
-                return Err(ValidationError::new("Unknown application name"));
-            };
+            let bin_name = std::env::current_exe()
+                .map_err(|_e| ValidationError::new("Unknown application name"))?
+                .file_name()
+                .map(|x| x.to_string_lossy().to_string())
+                .ok_or_else(|| ValidationError::new("Unknown application name"))?;
 
             clap_complete::generate(
                 *shell,
