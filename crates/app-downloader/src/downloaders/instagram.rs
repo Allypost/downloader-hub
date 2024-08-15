@@ -34,22 +34,13 @@ impl Downloader for InstagramDownloader {
     ) -> Result<ResolvedDownloadFileRequest, String> {
         let media_urls = get_media_urls(&req.original_url)?;
 
-        Ok(ResolvedDownloadFileRequest::from_urls(req, media_urls))
+        Ok(ResolvedDownloadFileRequest::from_urls(req, media_urls)
+            .with_preferred_downloader(GenericDownloader)
+            .with_download_option("max-parllel", "1"))
     }
 
     fn download_resolved(&self, resolved_file: &ResolvedDownloadFileRequest) -> DownloaderReturn {
-        let thread_pool = rayon::ThreadPoolBuilder::new().num_threads(1).build();
-
-        let thread_pool = match thread_pool {
-            Ok(x) => x,
-            Err(e) => {
-                app_logger::error!("Failed to create thread pool: {:?}", e);
-
-                return vec![Err(format!("Failed to create thread pool: {:?}", e))];
-            }
-        };
-
-        thread_pool.install(|| GenericDownloader.download_resolved(resolved_file))
+        GenericDownloader.download_resolved(resolved_file)
     }
 }
 

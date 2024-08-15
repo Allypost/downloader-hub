@@ -37,27 +37,15 @@ impl Downloader for ImgurDownloader {
     ) -> Result<ResolvedDownloadFileRequest, String> {
         let post_data = get_post_data(req)?;
 
-        Ok(ResolvedDownloadFileRequest::from_urls(
-            req,
-            post_data.media.into_iter().map(|x| x.url),
-        ))
+        Ok(
+            ResolvedDownloadFileRequest::from_urls(req, post_data.media.into_iter().map(|x| x.url))
+                .with_preferred_downloader(GenericDownloader)
+                .with_download_option("max-parllel", "4"),
+        )
     }
 
     fn download_resolved(&self, resolved: &ResolvedDownloadFileRequest) -> DownloaderReturn {
-        let thread_pool = rayon::ThreadPoolBuilder::new()
-            .num_threads(rayon::current_num_threads().min(4))
-            .build();
-
-        let thread_pool = match thread_pool {
-            Ok(x) => x,
-            Err(e) => {
-                app_logger::error!("Failed to create thread pool: {:?}", e);
-
-                return vec![Err(format!("Failed to create thread pool: {:?}", e))];
-            }
-        };
-
-        thread_pool.install(|| GenericDownloader.download_resolved(resolved))
+        GenericDownloader.download_resolved(resolved)
     }
 }
 

@@ -1,7 +1,10 @@
 use std::{ffi::OsString, fs::File, path::PathBuf, string::ToString};
 
 use app_helpers::id::time_id;
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use rayon::{
+    iter::{IntoParallelRefIterator, ParallelIterator},
+    ThreadPoolBuilder,
+};
 use unicode_segmentation::UnicodeSegmentation;
 use url::Url;
 
@@ -34,11 +37,32 @@ impl Downloader for GenericDownloader {
     }
 
     fn download_resolved(&self, resolved: &ResolvedDownloadFileRequest) -> DownloaderReturn {
-        resolved
-            .resolved_urls
-            .par_iter()
-            .map(|url| self.download_one(&resolved.request_info, url))
-            .collect::<Vec<_>>()
+        let thread_pool = {
+            let mut thread_pool = ThreadPoolBuilder::new();
+
+            if let Some(max_parallel) = resolved.download_option_parsed("max-parallel") {
+                thread_pool = thread_pool.num_threads(max_parallel);
+            }
+
+            thread_pool.build()
+        };
+
+        let thread_pool = match thread_pool {
+            Ok(x) => x,
+            Err(e) => {
+                app_logger::error!("Failed to create thread pool: {:?}", e);
+
+                return vec![Err(format!("Failed to create thread pool: {:?}", e))];
+            }
+        };
+
+        thread_pool.install(|| {
+            resolved
+                .resolved_urls
+                .par_iter()
+                .map(|url| self.download_one(&resolved.request_info, url))
+                .collect::<Vec<_>>()
+        })
     }
 }
 

@@ -46,7 +46,7 @@ impl Downloader for TwitterDownloader {
     }
 
     fn description(&self) -> &'static str {
-        "Downloads images and videos from Twitter/X tweets/posts. Also screenshots the tweet/post."
+        "Downloads images and videos from Twitter/X and many ActivityPub instances. Also screenshots the tweet/post."
     }
 
     #[app_logger::instrument]
@@ -60,7 +60,8 @@ impl Downloader for TwitterDownloader {
             Some(x) => x,
             None => {
                 let screenshot_url = self.screenshot_tweet_url(&req.original_url);
-                return Ok(ResolvedDownloadFileRequest::from_url(req, screenshot_url));
+                return Ok(ResolvedDownloadFileRequest::from_url(req, screenshot_url)
+                    .with_preferred_downloader(GenericDownloader));
             }
         };
 

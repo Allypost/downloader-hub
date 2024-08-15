@@ -1,7 +1,9 @@
 use std::{
+    collections::HashMap,
     convert::Into,
     fmt::Debug,
     path::{Path, PathBuf},
+    string::String,
 };
 
 use http::{
@@ -41,10 +43,27 @@ pub trait Downloader: Debug + Send + Sync {
             }
         };
 
+        if let Some(preferred_downloader) = &resolved.prefer_downloader {
+            return preferred_downloader.download_resolved(&resolved);
+        }
+
         self.download_resolved(&resolved)
     }
 
     fn download_resolved(&self, resolved_file: &ResolvedDownloadFileRequest) -> DownloaderReturn;
+}
+impl std::fmt::Display for dyn Downloader {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Downloader::{}", self.name())
+    }
+}
+impl Serialize for dyn Downloader {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::ser::Serializer,
+    {
+        self.to_string().serialize(serializer)
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -73,10 +92,13 @@ const fn default_get() -> Method {
     Method::GET
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ResolvedDownloadFileRequest {
     pub request_info: DownloadFileRequest,
     pub resolved_urls: Vec<DownloadUrlInfo>,
+    #[serde(skip_deserializing)]
+    pub prefer_downloader: Option<Box<dyn Downloader>>,
+    pub download_options: HashMap<String, String>,
 }
 impl ResolvedDownloadFileRequest {
     #[must_use]
@@ -88,6 +110,8 @@ impl ResolvedDownloadFileRequest {
         Self {
             request_info: req.clone(),
             resolved_urls: urls.into_iter().map(Into::into).collect(),
+            prefer_downloader: None,
+            download_options: HashMap::new(),
         }
     }
 
@@ -105,6 +129,38 @@ impl ResolvedDownloadFileRequest {
         I: Into<DownloadUrlInfo>,
     {
         Self::from_urls(req, [url])
+    }
+
+    #[must_use]
+    pub fn with_preferred_downloader<D>(mut self, downloader: D) -> Self
+    where
+        D: Downloader + 'static,
+    {
+        self.prefer_downloader = Some(Box::new(downloader));
+        self
+    }
+
+    #[must_use]
+    pub fn with_download_option<K, V>(mut self, key: K, value: V) -> Self
+    where
+        K: Into<String>,
+        V: Into<String>,
+    {
+        self.download_options.insert(key.into(), value.into());
+        self
+    }
+
+    #[must_use]
+    pub fn download_option(&self, key: &str) -> Option<&str> {
+        self.download_options.get(key).map(String::as_str)
+    }
+
+    #[must_use]
+    pub fn download_option_parsed<T>(&self, key: &str) -> Option<T>
+    where
+        T: std::str::FromStr,
+    {
+        self.download_options.get(key).and_then(|x| x.parse().ok())
     }
 }
 
