@@ -58,6 +58,8 @@ enum BotCommand {
     ListDownloaders,
     #[command(description = "List available fixers.")]
     ListFixers,
+    #[command(description = "Responds with 'Pong!'")]
+    Ping,
     // #[command(
     //     description = "Split the video into scenes (best effort). Must be a reply to a video \
     //                    message or text of a video message."
@@ -216,6 +218,13 @@ async fn handle_command(msg: Message, command: BotCommand) -> ResponseResult<()>
 
             TelegramBot::instance()
                 .send_message(msg.chat.id, format!("Available fixers:\n\n{}", fixers_text))
+                .reply_to_message_id(msg.id)
+                .allow_sending_without_reply(true)
+                .await?;
+        }
+        BotCommand::Ping => {
+            TelegramBot::instance()
+                .send_message(msg.chat.id, "Pong!")
                 .reply_to_message_id(msg.id)
                 .allow_sending_without_reply(true)
                 .await?;
