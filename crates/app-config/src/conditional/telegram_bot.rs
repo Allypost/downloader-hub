@@ -42,6 +42,12 @@ pub struct TelegramBotConfig {
     #[arg(long = "telegram-owner-download-dir", value_name = "DOWNLOAD_DIR", env = "DOWNLOADER_HUB_TELEGRAM_OWNER_DOWNLOAD_DIR", value_hint = ValueHint::DirPath, value_parser = value_parser_parse_valid_directory())]
     #[validate(custom(function = "validate_is_writable_directory"))]
     pub owner_download_dir: Option<PathBuf>,
+
+    /// The about command text for the bot.
+    ///
+    /// If left empty, a generic default text will be used.
+    #[arg(long = "telegram-about", value_name = "ABOUT", env = "DOWNLOADER_HUB_TELEGRAM_ABOUT", value_hint = ValueHint::Other)]
+    pub about: Option<String>,
 }
 impl TelegramBotConfig {
     #[must_use]

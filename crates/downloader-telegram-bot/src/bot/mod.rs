@@ -52,6 +52,8 @@ enum BotCommand {
     Help,
     #[command(description = "Start using the bot.")]
     Start,
+    #[command(description = "Print some info about the bot.")]
+    About,
     #[command(description = "List available downloaders.")]
     ListDownloaders,
     #[command(description = "List available fixers.")]
@@ -149,10 +151,43 @@ async fn handle_command(msg: Message, command: BotCommand) -> ResponseResult<()>
                     msg.chat.id,
                     "Hello! I'm a bot that can help download your memes.\n\nJust send me a link \
                      to a funny video and I'll do the rest!\nYou can also just send or forward a \
-                     message with media and links to me and I'll fix it up for you!",
+                     message with media and links to me and I'll fix it up for you!\n\nIf you'd like to know more use the /help or /about commands.",
                 )
                 .reply_to_message_id(msg.id)
                 .allow_sending_without_reply(true)
+                .await?;
+        }
+        BotCommand::About => {
+            let tg_config = Config::global().telegram_bot();
+
+            let text = tg_config.about.clone().unwrap_or_else(|| {
+                let mut paragraphs = vec![
+                    r#"This bot is a part of the <a href="https://github.com/Allypost/downloader-hub/">Downloader Hub project</a>. It's a bot that helps you download your memes"#.to_string(),
+                    "It is powered by Rust, yt-dlp, ffmpeg, and some external services.".to_string(),
+                    "The source code is available at\nhttps://github.com/Allypost/downloader-hub/tree/main/crates/downloader-telegram-bot"
+                        .to_string(),
+                    "You can find out about the available downloaders and fixers, and what they do by using the /list_downloaders and /list_fixers commands."
+                    .to_string(),
+                    "No data about downloading/users is stored outside of logs that live in RAM".to_string(),
+                ];
+
+                if let Some(owner_link) = tg_config.owner_link() {
+                    paragraphs.push(format!(
+                        r#"This bot instance is ran by <a href="{link}">this user</a>."#,
+                        link = owner_link,
+                    ));
+                }
+
+                paragraphs.join("\n\n")
+            });
+
+            trace!(?text, "Sending about message");
+
+            TelegramBot::instance()
+                .send_message(msg.chat.id, text.trim())
+                .reply_to_message_id(msg.id)
+                .allow_sending_without_reply(true)
+                .disable_web_page_preview(true)
                 .await?;
         }
         BotCommand::ListDownloaders => {
