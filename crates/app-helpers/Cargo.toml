@@ -24,6 +24,10 @@ file-format = { version = "0.25.0", features = ["reader"] }
 mime = "0.3.17"
 addr = "0.15.6"
 url.workspace = true
+ipnet = "2.9.0"
+iprange = "0.6.7"
+once_cell.workspace = true
+dns-lookup = "2.0.4"
 
 [lints]
 workspace = true

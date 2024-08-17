@@ -263,10 +263,14 @@ dependencies = [
  "app-config",
  "app-logger",
  "base64 0.22.1",
+ "dns-lookup",
  "file-format",
  "futures",
  "infer",
+ "ipnet",
+ "iprange",
  "mime",
+ "once_cell",
  "serde",
  "serde_json",
  "thiserror",
@@ -304,19 +308,6 @@ dependencies = [
  "app-logger",
  "tokio",
  "tracing",
-]
-
-[[package]]
-name = "app-validators"
-version = "0.5.0"
-dependencies = [
- "anyhow",
- "dns-lookup",
- "ipnet",
- "iprange",
- "once_cell",
- "thiserror",
- "url",
 ]
 
 [[package]]
@@ -1452,7 +1443,6 @@ dependencies = [
  "app-logger",
  "app-migration",
  "app-tasks",
- "app-validators",
  "axum",
  "axum-extra",
  "chrono",

@@ -4,7 +4,7 @@ use app_entities::{
     download_request,
     entity_meta::{common::path::AppPath, download_result::DownloadResultStatus},
 };
-use app_validators::ip::url_resolves_to_valid_ip;
+use app_helpers::ip::url_resolves_to_valid_ip;
 use sea_orm::{prelude::*, TransactionTrait};
 
 use super::HandlerError;
