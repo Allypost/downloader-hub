@@ -8,6 +8,7 @@ use app_actions::{
     download_file, fix_file,
 };
 use app_config::Config;
+use futures::{stream::FuturesUnordered, StreamExt};
 use tracing::{debug, error, info, warn};
 use tracing_subscriber::{filter::LevelFilter, util::SubscriberInitExt};
 
@@ -55,22 +56,22 @@ async fn main() {
     info!("Outputting to {:?}", cli_config.output_directory);
 
     info!("Starting download");
-    let downloaded_urls = {
-        let downloaded_urls = urls.into_iter().map(|url| async move {
+    let downloaded_urls = urls
+        .into_iter()
+        .map(|url| async move {
             let url_str = url.to_string();
             download_file(url, &cli_config.output_directory)
                 .await
                 .into_iter()
                 .map(|x| x.map_err(|e| (url_str.clone(), e)))
                 .collect::<Vec<_>>()
-        });
-
-        futures::future::join_all(downloaded_urls)
-            .await
-            .into_iter()
-            .flatten()
-            .collect::<Vec<_>>()
-    };
+        })
+        .collect::<FuturesUnordered<_>>()
+        .collect::<Vec<_>>()
+        .await
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
     debug!(urls = ?downloaded_urls, "Downloaded urls");
 
     let (downloaded, failed_downloaded) = split_vec_err(downloaded_urls);
@@ -88,19 +89,17 @@ async fn main() {
 
     debug!(files = ?to_fix, "Files to fix");
     info!("Starting fixing of {} files", to_fix.len());
-    let fixed_files = {
-        let fixed_files = to_fix
-            .into_iter()
-            .map(|x| async move {
-                fix_file(&x)
-                    .await
-                    .map(|n| (x.clone(), n))
-                    .map_err(|e| (x, e))
-            })
-            .collect::<Vec<_>>();
-
-        futures::future::join_all(fixed_files).await
-    };
+    let fixed_files = to_fix
+        .into_iter()
+        .map(|x| async move {
+            fix_file(&x)
+                .await
+                .map(|n| (x.clone(), n))
+                .map_err(|e| (x, e))
+        })
+        .collect::<FuturesUnordered<_>>()
+        .collect::<Vec<_>>()
+        .await;
 
     let (fixed, failed_fixed) = split_vec_err(fixed_files);
     info!(

@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use futures::{stream::FuturesUnordered, StreamExt};
 use tracing::debug;
 
 pub mod actions;
@@ -30,13 +31,12 @@ where
 
     debug!(?download_requests, "Download requests");
 
-    let download_results = {
-        let futs = download_requests
-            .into_iter()
-            .map(|x| async move { downloaders::download_file(&x).await });
-
-        futures::future::join_all(futs).await
-    };
+    let download_results = download_requests
+        .into_iter()
+        .map(|x| async move { downloaders::download_file(&x).await })
+        .collect::<FuturesUnordered<_>>()
+        .collect::<Vec<_>>()
+        .await;
 
     debug!(?download_results, "Download results");
 

@@ -6,6 +6,7 @@ use std::{
 
 use app_config::Config;
 use app_helpers::{ffprobe, file_time::transfer_file_times, trash::move_to_trash};
+use futures::{stream::FuturesUnordered, StreamExt};
 use thiserror::Error;
 use tokio::process::Command;
 use tracing::{debug, trace, warn};
@@ -74,17 +75,15 @@ async fn do_auto_crop_video(file_path: &Path) -> Result<PathBuf, CropError> {
     };
 
     let crop_filters = {
-        let crop_filters = {
-            let futs = vec![BorderColor::White, BorderColor::Black]
-                .into_iter()
-                .map(|color| async move { get_crop_filter(file_path_str, &color).await.ok() });
-
-            futures::future::join_all(futs)
-                .await
-                .into_iter()
-                .flatten()
-                .collect::<Option<Vec<_>>>()
-        };
+        let crop_filters = vec![BorderColor::White, BorderColor::Black]
+            .into_iter()
+            .map(|color| async move { get_crop_filter(file_path_str, &color).await.ok() })
+            .collect::<FuturesUnordered<_>>()
+            .collect::<Vec<_>>()
+            .await
+            .into_iter()
+            .flatten()
+            .collect::<Option<Vec<_>>>();
 
         if let Some(fs) = crop_filters {
             trace!("Crop filters: {fs:?}");

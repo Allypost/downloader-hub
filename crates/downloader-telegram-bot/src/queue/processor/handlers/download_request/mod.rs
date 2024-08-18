@@ -12,6 +12,7 @@ use app_helpers::{
     id::time_thread_id,
     temp_dir::TempDir,
 };
+use futures::{stream::FuturesUnordered, StreamExt};
 use parking_lot::Mutex;
 use teloxide::{
     net::Download,
@@ -377,51 +378,49 @@ where
 
     let failed = Arc::new(Mutex::new(Vec::new()));
     trace!(?files, "Getting file infos");
-    let file_info = {
-        let futs = files
-            .into_iter()
-            .map(|x| x.as_ref().to_path_buf())
-            .map(|file_path| {
-                let failed = failed.clone();
+    let file_info = files
+        .into_iter()
+        .map(|x| x.as_ref().to_path_buf())
+        .map(|file_path| {
+            let failed = failed.clone();
 
-                async move {
-                    let mime = {
-                        let file_path = file_path.clone();
+            async move {
+                let mime = {
+                    let file_path = file_path.clone();
 
-                        tokio::task::spawn_blocking(move || infer_file_type(&file_path).ok())
-                            .await
-                            .ok()?
-                    };
+                    tokio::task::spawn_blocking(move || infer_file_type(&file_path).ok())
+                        .await
+                        .ok()?
+                };
 
-                    let metadata = match tokio::fs::metadata(&file_path).await {
-                        Ok(meta) => Some(meta),
-                        Err(e) => {
-                            trace!(?e, "Failed to get metadata for file");
-                            {
-                                failed.lock().push((
-                                    file_path.clone(),
-                                    "failed to get metadata for file".to_string(),
-                                ));
-                            }
-
-                            None
+                let metadata = match tokio::fs::metadata(&file_path).await {
+                    Ok(meta) => Some(meta),
+                    Err(e) => {
+                        trace!(?e, "Failed to get metadata for file");
+                        {
+                            failed.lock().push((
+                                file_path.clone(),
+                                "failed to get metadata for file".to_string(),
+                            ));
                         }
-                    }?;
 
-                    Some(FileInfo {
-                        path: file_path,
-                        mime,
-                        metadata,
-                    })
-                }
-            });
+                        None
+                    }
+                }?;
 
-        futures::future::join_all(futs)
-            .await
-            .into_iter()
-            .flatten()
-            .collect::<Vec<_>>()
-    };
+                Some(FileInfo {
+                    path: file_path,
+                    mime,
+                    metadata,
+                })
+            }
+        })
+        .collect::<FuturesUnordered<_>>()
+        .collect::<Vec<_>>()
+        .await
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
     trace!(?file_info, "Got file infos");
 
     trace!("Converting to media files");
@@ -507,15 +506,16 @@ async fn download_files_from_urls(
     file_urls: &[Url],
     download_dir: &Path,
 ) -> (Vec<PathBuf>, Vec<String>) {
-    let results = {
-        let futs = file_urls.iter().map(|url| async move {
+    let results = file_urls
+        .iter()
+        .map(|url| async move {
             let res = download_file(url, download_dir).await;
 
             (url.to_string(), res)
-        });
-
-        futures::future::join_all(futs).await
-    };
+        })
+        .collect::<FuturesUnordered<_>>()
+        .collect::<Vec<_>>()
+        .await;
 
     let mut downloaded_paths = vec![];
     let mut errors = vec![];
