@@ -55,13 +55,13 @@ pub async fn fix_file_with(fixers: Vec<FixerInstance>, request: FixRequest) -> F
     for fixer in fixers {
         trace!(?fixer, "Trying fixer");
 
-        if !fixer.can_run_for(&request) {
+        if !fixer.can_run_for(&req) {
             continue;
         }
 
         trace!("Running fixer {fixer:?} on {req:?}");
 
-        let result = match fixer.run(&request).await {
+        let result = match fixer.run(&req).await {
             Ok(x) => x,
             Err(e) => {
                 warn!("Failed to run fixer {fixer:?} on {req:?}: {e:?}");
