@@ -1,7 +1,7 @@
 use teloxide::{
     payloads::{EditMessageTextSetters, SendMessageSetters},
     requests::Requester,
-    types::{ChatId, Message, MessageId},
+    types::{ChatId, LinkPreviewOptions, Message, MessageId, ReplyParameters},
 };
 
 use crate::bot::TelegramBot;
@@ -41,8 +41,7 @@ impl StatusMessage {
         TelegramBot::instance()
             .send_message(self.chat_id, text)
             .disable_notification(true)
-            .reply_to_message_id(self.msg_id)
-            .allow_sending_without_reply(true)
+            .reply_parameters(ReplyParameters::new(self.msg_id).allow_sending_without_reply())
             .await
     }
 
@@ -52,7 +51,13 @@ impl StatusMessage {
                 Some(reply_id) => {
                     let res = TelegramBot::instance()
                         .edit_message_text(self.chat_id, reply_id, text)
-                        .disable_web_page_preview(true)
+                        .link_preview_options(LinkPreviewOptions {
+                            is_disabled: true,
+                            prefer_large_media: false,
+                            prefer_small_media: false,
+                            show_above_text: false,
+                            url: None,
+                        })
                         .await;
 
                     if matches!(

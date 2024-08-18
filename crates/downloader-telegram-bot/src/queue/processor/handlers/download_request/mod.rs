@@ -20,6 +20,7 @@ use teloxide::{
     types::{
         InputFile, InputMedia, InputMediaAudio, InputMediaDocument, InputMediaPhoto,
         InputMediaVideo, MediaKind, Message, MessageEntityKind, MessageKind, PhotoSize,
+        ReplyParameters,
     },
 };
 use tokio::fs::File;
@@ -66,7 +67,7 @@ impl Handler for DownloadRequestHandler {
 
         trace!(?msg, "Got message from task");
 
-        if let Some(user) = msg.from() {
+        if let Some(user) = msg.from.as_ref() {
             Span::current().record("uid", field::display(user.id.0));
             Span::current().record("name", field::debug(user.full_name()));
 
@@ -107,7 +108,7 @@ impl Handler for DownloadRequestHandler {
         trace!(?fixed_file_paths, "Fixed files");
 
         if let Some(owner_id) = Config::global().telegram_bot().owner_id {
-            if msg.from().is_some_and(|user| user.id.0 == owner_id) {
+            if msg.from.as_ref().is_some_and(|user| user.id.0 == owner_id) {
                 task.update_status_message("Copying files to download directory...")
                     .await;
 
@@ -168,8 +169,10 @@ async fn send_files_to_telegram(
 
         TelegramBot::instance()
             .send_media_group(task.status_message().chat_id(), media_group)
-            .reply_to_message_id(task.status_message().msg_replying_to_id())
-            .allow_sending_without_reply(true)
+            .reply_parameters(
+                ReplyParameters::new(task.status_message().msg_replying_to_id())
+                    .allow_sending_without_reply(),
+            )
             .send()
             .await
             .map_err(|x| HandlerError::Fatal(x.to_string()))?;

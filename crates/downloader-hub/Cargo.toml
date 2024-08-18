@@ -30,7 +30,7 @@ hmac = "0.12.1"
 http-range-header = "0.4.1"
 listenfd = "1.0.1"
 once_cell.workspace = true
-sea-orm = { version = "0.12.15", features = [
+sea-orm = { version = "1.0.0", features = [
     "macros",
     "sqlx-postgres",
     "runtime-tokio-rustls",

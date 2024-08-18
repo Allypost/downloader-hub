@@ -13,7 +13,7 @@ anyhow.workspace = true
 chrono.workspace = true
 http = "1.1.0"
 http-serde = "2.1.1"
-sea-orm = "0.12.15"
+sea-orm = "1.0.0"
 serde.workspace = true
 serde_json.workspace = true
 

@@ -7,7 +7,10 @@ use app_config::Config;
 use helpers::status_message::StatusMessage;
 use once_cell::sync::OnceCell;
 use teloxide::{
-    adaptors::trace, prelude::*, requests::RequesterExt, types::ParseMode,
+    adaptors::trace,
+    prelude::*,
+    requests::RequesterExt,
+    types::{LinkPreviewOptions, ParseMode, ReplyParameters},
     utils::command::BotCommands,
 };
 use tracing::{field, info, trace, Instrument, Span};
@@ -79,10 +82,12 @@ pub async fn run() -> anyhow::Result<()> {
 
     info!(api_url = ?TelegramBot::pure_instance().api_url().as_str(), id = ?me.id, user = ?me.username(), name = ?me.full_name(), "Bot started");
 
-    Dispatcher::builder(bot, Update::filter_message().endpoint(answer))
-        .build()
-        .dispatch()
-        .await;
+    Box::pin(
+        Dispatcher::builder(bot, Update::filter_message().endpoint(answer))
+            .build()
+            .dispatch(),
+    )
+    .await;
 
     Ok(())
 }
@@ -142,8 +147,7 @@ async fn handle_command(msg: Message, command: BotCommand) -> ResponseResult<()>
         BotCommand::Help => {
             TelegramBot::instance()
                 .send_message(msg.chat.id, BotCommand::descriptions().to_string())
-                .reply_to_message_id(msg.id)
-                .allow_sending_without_reply(true)
+                .reply_parameters(ReplyParameters::new(msg.id).allow_sending_without_reply())
                 .await?;
         }
         BotCommand::Start => {
@@ -155,8 +159,7 @@ async fn handle_command(msg: Message, command: BotCommand) -> ResponseResult<()>
                      message with media and links to me and I'll fix it up for you!\n\nIf you'd \
                      like to know more use the /help or /about commands.",
                 )
-                .reply_to_message_id(msg.id)
-                .allow_sending_without_reply(true)
+                .reply_parameters(ReplyParameters::new(msg.id).allow_sending_without_reply())
                 .await?;
         }
         BotCommand::About => {
@@ -187,9 +190,14 @@ async fn handle_command(msg: Message, command: BotCommand) -> ResponseResult<()>
 
             TelegramBot::instance()
                 .send_message(msg.chat.id, text.trim())
-                .reply_to_message_id(msg.id)
-                .allow_sending_without_reply(true)
-                .disable_web_page_preview(true)
+                .reply_parameters(ReplyParameters::new(msg.id).allow_sending_without_reply())
+                .link_preview_options(LinkPreviewOptions {
+                    is_disabled: true,
+                    prefer_large_media: false,
+                    prefer_small_media: false,
+                    show_above_text: false,
+                    url: None,
+                })
                 .await?;
         }
         BotCommand::ListDownloaders => {
@@ -204,8 +212,7 @@ async fn handle_command(msg: Message, command: BotCommand) -> ResponseResult<()>
                     msg.chat.id,
                     format!("Available downloaders:\n\n{}", downloaders_text),
                 )
-                .reply_to_message_id(msg.id)
-                .allow_sending_without_reply(true)
+                .reply_parameters(ReplyParameters::new(msg.id).allow_sending_without_reply())
                 .await?;
         }
         BotCommand::ListFixers => {
@@ -217,15 +224,13 @@ async fn handle_command(msg: Message, command: BotCommand) -> ResponseResult<()>
 
             TelegramBot::instance()
                 .send_message(msg.chat.id, format!("Available fixers:\n\n{}", fixers_text))
-                .reply_to_message_id(msg.id)
-                .allow_sending_without_reply(true)
+                .reply_parameters(ReplyParameters::new(msg.id).allow_sending_without_reply())
                 .await?;
         }
         BotCommand::Ping => {
             TelegramBot::instance()
                 .send_message(msg.chat.id, "Pong!")
-                .reply_to_message_id(msg.id)
-                .allow_sending_without_reply(true)
+                .reply_parameters(ReplyParameters::new(msg.id).allow_sending_without_reply())
                 .await?;
         }
     }
