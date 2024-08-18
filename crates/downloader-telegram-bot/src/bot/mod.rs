@@ -2,7 +2,10 @@ pub mod helpers;
 
 use std::string::ToString;
 
-use app_actions::{downloaders::AVAILABLE_DOWNLOADERS, fixers::AVAILABLE_FIXERS};
+use app_actions::{
+    actions::AVAILABLE_ACTIONS, downloaders::AVAILABLE_DOWNLOADERS,
+    extractors::AVAILABLE_EXTRACTORS, fixers::AVAILABLE_FIXERS,
+};
 use app_config::Config;
 use helpers::status_message::StatusMessage;
 use once_cell::sync::OnceCell;
@@ -56,10 +59,14 @@ enum BotCommand {
     Start,
     #[command(description = "Print some info about the bot.")]
     About,
+    #[command(description = "List available extractors.")]
+    ListExtractors,
     #[command(description = "List available downloaders.")]
     ListDownloaders,
     #[command(description = "List available fixers.")]
     ListFixers,
+    #[command(description = "List available actions.")]
+    ListActions,
     #[command(description = "Responds with 'Pong!'")]
     Ping,
     // #[command(
@@ -141,6 +148,7 @@ async fn answer(_bot: &TeloxideBot, msg: Message) -> ResponseResult<()> {
     Ok(())
 }
 
+#[allow(clippy::too_many_lines)]
 async fn handle_command(msg: Message, command: BotCommand) -> ResponseResult<()> {
     info!(?command, "Handling command");
     match command {
@@ -171,7 +179,7 @@ async fn handle_command(msg: Message, command: BotCommand) -> ResponseResult<()>
                     "It is powered by Rust, yt-dlp, ffmpeg, and some external services.".to_string(),
                     "The source code is available at\nhttps://github.com/Allypost/downloader-hub/tree/main/crates/downloader-telegram-bot"
                         .to_string(),
-                    "You can find out about the available downloaders and fixers, and what they do by using the /list_downloaders and /list_fixers commands."
+                    "You can find out about the available downloaders and fixers, and what they do by using the /list_extractors, /list_downloaders and /list_fixers commands."
                     .to_string(),
                     "No data about downloading/users is stored outside of logs that live in RAM".to_string(),
                 ];
@@ -200,17 +208,54 @@ async fn handle_command(msg: Message, command: BotCommand) -> ResponseResult<()>
                 })
                 .await?;
         }
-        BotCommand::ListDownloaders => {
-            let downloaders_text = AVAILABLE_DOWNLOADERS
+        BotCommand::ListExtractors => {
+            let extractors_text = AVAILABLE_EXTRACTORS
                 .iter()
-                .map(|x| format!("<u>{}</u>\n{}", x.name(), x.description()))
+                .map(|x| {
+                    format!(
+                        "<blockquote><u>{}</u>\n{}</blockquote>",
+                        x.name(),
+                        x.description()
+                    )
+                })
                 .collect::<Vec<_>>()
-                .join("\n\n");
+                .join("\n");
 
             TelegramBot::instance()
                 .send_message(
                     msg.chat.id,
-                    format!("Available downloaders:\n\n{}", downloaders_text),
+                    format!(
+                        "Extractors are used to get info about links. That info can then be \
+                         passed to the downloaders who actually download the \
+                         content.\n\nAvailable extractors:\n{}",
+                        extractors_text
+                    ),
+                )
+                .reply_parameters(ReplyParameters::new(msg.id).allow_sending_without_reply())
+                .await?;
+        }
+        BotCommand::ListDownloaders => {
+            let downloaders_text = AVAILABLE_DOWNLOADERS
+                .iter()
+                .map(|x| {
+                    format!(
+                        "<blockquote><u>{}</u>\n{}</blockquote>",
+                        x.name(),
+                        x.description()
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join("\n");
+
+            TelegramBot::instance()
+                .send_message(
+                    msg.chat.id,
+                    format!(
+                        "Downloaders are the things that actually download the content. They need \
+                         to be given the exact info about what and how to download, which they \
+                         get from extractors.\n\nAvailable downloaders:\n{}",
+                        downloaders_text
+                    ),
                 )
                 .reply_parameters(ReplyParameters::new(msg.id).allow_sending_without_reply())
                 .await?;
@@ -218,12 +263,50 @@ async fn handle_command(msg: Message, command: BotCommand) -> ResponseResult<()>
         BotCommand::ListFixers => {
             let fixers_text = AVAILABLE_FIXERS
                 .iter()
-                .map(|x| format!("<u>{}</u>\n{}", x.name(), x.description()))
+                .map(|x| {
+                    format!(
+                        "<blockquote><u>{}</u>\n{}</blockquote>",
+                        x.name(),
+                        x.description()
+                    )
+                })
                 .collect::<Vec<_>>()
-                .join("\n\n");
+                .join("\n");
 
             TelegramBot::instance()
-                .send_message(msg.chat.id, format!("Available fixers:\n\n{}", fixers_text))
+                .send_message(
+                    msg.chat.id,
+                    format!(
+                        "Fixers are used to fix up the content somewhere on disk in various \
+                         ways.\n\nAvailable fixers:\n{}",
+                        fixers_text
+                    ),
+                )
+                .reply_parameters(ReplyParameters::new(msg.id).allow_sending_without_reply())
+                .await?;
+        }
+        BotCommand::ListActions => {
+            let actions_text = AVAILABLE_ACTIONS
+                .iter()
+                .map(|x| {
+                    format!(
+                        "<blockquote><u>{}</u>\n{}</blockquote>",
+                        x.name(),
+                        x.description()
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join("\n");
+
+            TelegramBot::instance()
+                .send_message(
+                    msg.chat.id,
+                    format!(
+                        "Actions are used to do something with the content.\n\nAvailable \
+                         actions:\n{}",
+                        actions_text
+                    ),
+                )
                 .reply_parameters(ReplyParameters::new(msg.id).allow_sending_without_reply())
                 .await?;
         }
