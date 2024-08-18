@@ -1,7 +1,6 @@
 use std::string::ToString;
 
 use thiserror::Error;
-use tracing::instrument;
 
 use super::task::Task;
 use crate::queue::{task::TaskInfo, TASK_QUEUE};
@@ -44,7 +43,7 @@ impl TaskQueueProcessor {
     }
 }
 
-#[instrument]
+#[tracing::instrument]
 async fn handle_task(task: &Task) {
     let res = match task.info() {
         TaskInfo::DownloadRequest(uid) => download_request::handle_download_request(uid).await,

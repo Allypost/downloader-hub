@@ -4,10 +4,10 @@ use std::{
 };
 
 use app_helpers::domain::DomainParser;
+use app_logger::{debug, trace, warn};
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::Deserialize;
-use tracing::{debug, trace, warn};
 use url::Url;
 
 use super::Handler;

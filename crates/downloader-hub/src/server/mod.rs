@@ -1,6 +1,7 @@
 use std::{net::SocketAddr, time::Duration};
 
 use app_config::Config;
+use app_logger::{debug, info};
 use axum::{
     http::{header, HeaderValue, Request},
     middleware,
@@ -19,7 +20,7 @@ use tower_http::{
     timeout::TimeoutLayer,
     trace::TraceLayer,
 };
-use tracing::{debug, field, info, Span};
+use tracing::{field, Span};
 
 use self::app_middleware::auth::CurrentUser;
 use crate::db::AppDb;
