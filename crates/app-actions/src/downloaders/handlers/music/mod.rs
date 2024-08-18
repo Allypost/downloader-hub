@@ -3,8 +3,8 @@ pub mod yams;
 
 use std::path::{Path, PathBuf};
 
-use app_logger::warn;
 use once_cell::sync::Lazy;
+use tracing::warn;
 use url::Url;
 
 use super::{DownloadRequest, Downloader, DownloaderReturn};

@@ -4,6 +4,7 @@ use app_helpers::id::time_id;
 use http::header;
 use mime2ext::mime2ext;
 use tokio::{fs::File, io::AsyncWriteExt};
+use tracing::{debug, info, trace};
 use unicode_segmentation::UnicodeSegmentation;
 use url::Url;
 
@@ -41,7 +42,7 @@ impl GenericDownloader {
     ) -> Result<DownloadResult, String> {
         let url = &request_info.url;
 
-        app_logger::info!(?url, dir = ?request_info.download_dir(), "Downloading with generic downloader");
+        info!(?url, dir = ?request_info.download_dir(), "Downloading with generic downloader");
 
         let mut res = Client::base_with_url(url)?
             .headers(url.headers().clone())
@@ -52,7 +53,7 @@ impl GenericDownloader {
             .map_err(|e| format!("Failed to get response: {:?}", e))?;
 
         let mime_type = res.headers().get(header::CONTENT_TYPE).map(|x| x.to_str());
-        app_logger::debug!(?mime_type, "Got mime type");
+        debug!(?mime_type, "Got mime type");
         let mime_type = match mime_type {
             Some(Ok(mime_type)) => mime_type,
             _ => "",
@@ -60,7 +61,7 @@ impl GenericDownloader {
 
         let extension = mime2ext(mime_type).map_or("unknown".to_string(), |x| (*x).to_string());
 
-        app_logger::debug!(?extension, "Got extension");
+        debug!(?extension, "Got extension");
 
         let id = time_id();
         let mut file_name = OsString::from(&id);
@@ -72,18 +73,18 @@ impl GenericDownloader {
             .get(header::CONTENT_DISPOSITION)
             .and_then(|x| content_disposition::ContentDisposition::from_raw(x).ok())
             .and_then(|x| {
-                app_logger::debug!(?x, "Got content disposition");
+                debug!(?x, "Got content disposition");
                 x.get_filename_ext()
                     .and_then(content_disposition::ExtendedValue::try_decode)
                     .or_else(|| x.get_filename().map(ToString::to_string))
             })
             .or_else(|| {
                 let url = url.url();
-                app_logger::debug!(?url, "Using url as filename");
+                debug!(?url, "Using url as filename");
                 url_to_filename(url, taken_filename_len)
             });
 
-        app_logger::trace!(?req_file_name, "Got file name from request");
+        trace!(?req_file_name, "Got file name from request");
 
         if let Some(url_file_name) = req_file_name {
             file_name.push(".");
@@ -94,7 +95,7 @@ impl GenericDownloader {
         file_name.push(extension);
 
         let file_path = request_info.download_dir().join(file_name);
-        app_logger::debug!(?file_path, "Writing to file");
+        debug!(?file_path, "Writing to file");
         let mut out_file = File::create(&file_path)
             .await
             .map_err(|e| format!("Failed to create file: {:?}", e))?;

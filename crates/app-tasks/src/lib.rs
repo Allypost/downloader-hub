@@ -1,4 +1,4 @@
-use app_logger::error;
+use tracing::error;
 
 pub(crate) mod cron;
 

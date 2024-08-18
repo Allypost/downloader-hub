@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use app_logger::debug;
+use tracing::debug;
 
 pub mod actions;
 pub(crate) mod common;

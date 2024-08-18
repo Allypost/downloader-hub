@@ -1,6 +1,6 @@
 use std::{env, fs, io, path::Path};
 
-use app_logger::debug;
+use tracing::debug;
 
 pub fn move_to_trash(f: &Path) -> Result<(), io::Error> {
     if env::var_os("MEME_DOWNLOADER_TRASH_DISABLED").is_some() {

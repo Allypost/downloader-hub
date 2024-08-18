@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
-use app_logger::{debug, trace};
 use thiserror::Error;
 use tokio::fs;
+use tracing::{debug, trace};
 
 use crate::fixers::{
     common::{FixRequest, FixResult, FixerError},

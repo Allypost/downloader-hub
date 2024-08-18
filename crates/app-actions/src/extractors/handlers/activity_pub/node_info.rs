@@ -1,6 +1,6 @@
-use app_logger::{debug, trace};
 use http::header;
 use serde::Deserialize;
+use tracing::{debug, trace};
 use url::Url;
 
 use crate::common::request::Client;

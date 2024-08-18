@@ -1,7 +1,6 @@
 use std::{net::SocketAddr, time::Duration};
 
 use app_config::Config;
-use app_logger::{debug, info};
 use axum::{
     http::{header, HeaderValue, Request},
     middleware,
@@ -20,7 +19,7 @@ use tower_http::{
     timeout::TimeoutLayer,
     trace::TraceLayer,
 };
-use tracing::{field, Span};
+use tracing::{debug, field, info, trace, Span};
 
 use self::app_middleware::auth::CurrentUser;
 use crate::db::AppDb;
@@ -31,14 +30,14 @@ mod app_response;
 mod routes;
 
 pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
-    app_logger::info!("Starting server...");
+    info!("Starting server...");
     let state = AppState::new().await?;
-    app_logger::trace!(state = ?state, "Created app state");
+    trace!(state = ?state, "Created app state");
 
     let router = routes::router();
     let router = add_middlewares(router).with_state(state);
 
-    app_logger::trace!(?router, "Finished building app router");
+    trace!(?router, "Finished building app router");
 
     let mut listenfd = ListenFd::from_env();
     let listener = match listenfd.take_tcp_listener(0)? {

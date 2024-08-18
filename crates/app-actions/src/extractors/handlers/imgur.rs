@@ -1,6 +1,7 @@
 use std::string::ToString;
 
 use serde::Deserialize;
+use tracing::trace;
 use url::Url;
 
 use super::{ExtractInfoRequest, ExtractedInfo, Extractor};
@@ -75,14 +76,14 @@ async fn get_post_data(req: &ExtractInfoRequest) -> Result<ImgurPostData, String
         .await
         .map_err(|e| format!("Failed to get text from imgur response: {:?}", e))?;
 
-    app_logger::trace!("Got response from imgur");
+    trace!("Got response from imgur");
 
     let script_data = tokio::task::spawn_blocking(move || {
         let dom = tl::parse(&resp, tl::ParserOptions::default())
             .map_err(|e| format!("Failed to parse html from imgur: {:?}", e))?;
         let parser = dom.parser();
 
-        app_logger::trace!("Parsed html from imgur");
+        trace!("Parsed html from imgur");
 
         dom.query_selector("script")
             .expect("Failed parse query selector")
@@ -99,7 +100,7 @@ async fn get_post_data(req: &ExtractInfoRequest) -> Result<ImgurPostData, String
     .await
     .map_err(|e| format!("Failed to get script data from imgur: {:?}", e))??;
 
-    app_logger::trace!(script_data, "Got script data from imgur");
+    trace!(script_data, "Got script data from imgur");
 
     // The replace is required because Imgur improperly always escapes single quotes
     serde_json::from_str::<String>(&script_data.replace("\\'", "'"))

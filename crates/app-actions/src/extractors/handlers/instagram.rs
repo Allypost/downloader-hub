@@ -1,9 +1,9 @@
 use std::result::Result;
 
-use app_logger::{debug, trace};
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::Deserialize;
+use tracing::{debug, trace};
 use url::Url;
 
 use super::{ExtractInfoRequest, Extractor};

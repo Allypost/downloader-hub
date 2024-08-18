@@ -4,14 +4,13 @@ use std::string::ToString;
 
 use app_actions::{downloaders::AVAILABLE_DOWNLOADERS, fixers::AVAILABLE_FIXERS};
 use app_config::Config;
-use app_logger::{info, trace};
 use helpers::status_message::StatusMessage;
 use once_cell::sync::OnceCell;
 use teloxide::{
     adaptors::trace, prelude::*, requests::RequesterExt, types::ParseMode,
     utils::command::BotCommands,
 };
-use tracing::{field, Instrument, Span};
+use tracing::{field, info, trace, Instrument, Span};
 use url::Url;
 
 use crate::queue::{task::Task, TaskQueue};

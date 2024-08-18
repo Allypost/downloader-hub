@@ -1,4 +1,4 @@
-use app_logger::{debug, trace};
+use tracing::{debug, trace};
 
 #[tracing::instrument]
 pub async fn update_yt_dlp() -> anyhow::Result<()> {

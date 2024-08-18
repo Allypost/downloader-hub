@@ -4,6 +4,7 @@ use app_entities::entity_meta::{
     download_result::{DownloadResultMeta, DownloadResultStatus},
 };
 use sea_orm::{DbErr, TransactionTrait};
+use tracing::{debug, error};
 
 use super::HandlerError;
 use crate::{db::AppDb, service::download_result::DownloadResultService};
@@ -21,7 +22,7 @@ pub async fn handle_process_result(request_id: i32, path: AppPath) -> Result<(),
             .await;
 
             if let Err(e) = err {
-                app_logger::error!(?e, "Failed to update download result");
+                error!(?e, "Failed to update download result");
             }
 
             Err(e)
@@ -36,7 +37,7 @@ pub async fn handle_process_result(request_id: i32, path: AppPath) -> Result<(),
             .await;
 
             if let Err(e) = err {
-                app_logger::error!(?e, "Failed to update download result");
+                error!(?e, "Failed to update download result");
             }
 
             Err(e)
@@ -45,7 +46,7 @@ pub async fn handle_process_result(request_id: i32, path: AppPath) -> Result<(),
 }
 
 async fn fix(request_id: i32, app_path: AppPath) -> Result<(), HandlerError> {
-    app_logger::debug!(?app_path, "Fixing file");
+    debug!(?app_path, "Fixing file");
 
     #[allow(clippy::match_wildcard_for_single_variants)]
     let path = match app_path.clone() {

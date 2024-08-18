@@ -1,7 +1,7 @@
 use std::path::Path;
 
-use app_logger::trace;
 use filetime::FileTime;
+use tracing::trace;
 
 pub fn transfer_file_times(path_from: &Path, path_to: &Path) -> Result<(), TransferTimesError> {
     trace!(

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use app_logger::{debug, trace};
+use tracing::{debug, trace};
 use url::Url;
 
 use super::{ExtractInfoRequest, ExtractedInfo, Extractor};

@@ -1,20 +1,22 @@
 use std::env;
 
 use tracing::Level;
-pub use tracing::{debug, error, info, instrument, trace, warn};
 use tracing_subscriber::{filter::Directive, fmt, prelude::*, EnvFilter};
 
 pub const COMPONENT_LEVELS: &[(&str, Level)] = &[
+    // Binaries
     ("downloader_hub", Level::INFO),
     ("downloader_telegram_bot", Level::INFO),
-    ("request", Level::INFO),
-    ("app", Level::INFO),
+    // Libraries
     ("app_actions", Level::INFO),
     ("app_config", Level::INFO),
     ("app_helpers", Level::INFO),
     ("app_logger", Level::INFO),
     ("app_tasks", Level::INFO),
-    ("app_validators", Level::INFO),
+    // Other
+    ("app", Level::INFO),
+    ("request", Level::INFO),
+    // External
 ];
 
 /// Initialize the logger

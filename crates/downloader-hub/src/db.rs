@@ -4,6 +4,7 @@ use app_config::Config;
 use app_migration::MigratorTrait;
 use once_cell::sync::OnceCell;
 use sea_orm::{Database, DatabaseConnection};
+use tracing::{debug, error, info, trace};
 
 static APP_DB: OnceCell<AppDb> = OnceCell::new();
 
@@ -18,7 +19,7 @@ impl AppDb {
             return Ok(db.clone());
         }
 
-        app_logger::debug!("Initializing database");
+        debug!("Initializing database");
 
         let mut opt = sea_orm::ConnectOptions::new(&Config::global().server().database.url);
         opt.max_connections(50)
@@ -27,23 +28,23 @@ impl AppDb {
             .sqlx_logging(true)
             .sqlx_logging_level(tracing::log::LevelFilter::Trace);
 
-        app_logger::debug!(opts = ?opt, "Connecting to database");
+        debug!(opts = ?opt, "Connecting to database");
 
         let db = Database::connect(opt).await?;
 
-        app_logger::info!("Connected to database");
+        info!("Connected to database");
 
-        app_logger::trace!("Checking database connection");
+        trace!("Checking database connection");
         db.ping().await?;
-        app_logger::trace!("Checked database connection");
+        trace!("Checked database connection");
 
-        app_logger::info!("Running migrations");
+        info!("Running migrations");
         app_migration::Migrator::up(&db, None).await?;
-        app_logger::info!("Migrations completed");
+        info!("Migrations completed");
 
         let new = Self { conn: db };
         APP_DB.set(new).map_err(|e| {
-            app_logger::error!(error = ?e, "Failed to set APP_DB");
+            error!(error = ?e, "Failed to set APP_DB");
             anyhow::anyhow!("Failed to set APP_DB: {:?}", e)
         })?;
 

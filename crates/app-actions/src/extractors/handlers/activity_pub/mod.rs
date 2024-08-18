@@ -1,6 +1,6 @@
-use app_logger::{debug, trace, warn};
 use node_info::{get_node_info, NodeInfo};
 use once_cell::sync::Lazy;
+use tracing::{debug, trace, warn};
 
 use super::{ExtractInfoRequest, ExtractedInfo, Extractor};
 use crate::common::url::UrlWithMeta;

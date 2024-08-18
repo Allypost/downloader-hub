@@ -1,6 +1,5 @@
 use app_config::Config;
-use app_logger::{debug, error, info};
-use tracing::{info_span, Instrument, Span};
+use tracing::{debug, error, info, info_span, Instrument, Span};
 
 pub mod tasks;
 

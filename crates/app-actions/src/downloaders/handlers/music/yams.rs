@@ -5,8 +5,8 @@ use std::{
     time::{Duration, Instant},
 };
 
-use app_logger::{debug, trace, warn};
 use serde::Deserialize;
+use tracing::{debug, trace, warn};
 use url::Url;
 use zip::ZipArchive;
 

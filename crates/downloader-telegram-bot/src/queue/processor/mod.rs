@@ -1,9 +1,8 @@
 mod handlers;
 
 use app_config::Config;
-use app_logger::{debug, error, info, warn};
 use handlers::HandlerError;
-use tracing::{field, info_span, Instrument, Span};
+use tracing::{debug, error, field, info, info_span, warn, Instrument, Span};
 
 use super::task::Task;
 use crate::queue::TASK_QUEUE;

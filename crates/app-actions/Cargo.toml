@@ -10,7 +10,6 @@ license.workspace = true
 anyhow.workspace = true
 app-config.workspace = true
 app-helpers.workspace = true
-app-logger.workspace = true
 async-trait.workspace = true
 encoding_rs = "0.8.34"
 filetime = "0.2.24"

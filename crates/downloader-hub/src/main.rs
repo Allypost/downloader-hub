@@ -1,5 +1,6 @@
 use app_config::Config;
 use app_tasks::TaskRunner;
+use tracing::{debug, error};
 
 use crate::{
     db::AppDb,
@@ -19,18 +20,18 @@ async fn main() {
 
     match loaded_dotenv {
         Ok(loaded_dotenv) => {
-            app_logger::debug!(path = ?loaded_dotenv, "Loaded dotenv file");
+            debug!(path = ?loaded_dotenv, "Loaded dotenv file");
         }
         Err(e) if e.not_found() => {
-            app_logger::debug!("No dotenv file found");
+            debug!("No dotenv file found");
         }
         Err(e) => {
-            app_logger::error!("Failed to load dotenv file: {e:?}");
+            error!("Failed to load dotenv file: {e:?}");
             panic!("Failed to load dotenv file: {e:?}");
         }
     }
 
-    app_logger::debug!(config = ?*Config::global(), "Running with config");
+    debug!(config = ?*Config::global(), "Running with config");
 
     AppDb::init().await.expect("Failed to initialize database");
 

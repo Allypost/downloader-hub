@@ -8,7 +8,7 @@ use app_actions::{
     download_file, fix_file,
 };
 use app_config::Config;
-use app_logger::{error, info};
+use tracing::{debug, error, info, warn};
 use tracing_subscriber::{filter::LevelFilter, util::SubscriberInitExt};
 
 #[tokio::main]
@@ -18,7 +18,7 @@ async fn main() {
 
     let config = Config::global();
 
-    app_logger::debug!(config = ?*config, "Running with config");
+    debug!(config = ?*config, "Running with config");
 
     let urls = get_explicit_urls();
     let mut urls = print_errors("urls", urls);
@@ -47,10 +47,10 @@ async fn main() {
             Err(e) => errs.push(e),
         }
 
-        app_logger::warn!("Failed to parse {x:?} as URL or file: {errs:?}");
+        warn!("Failed to parse {x:?} as URL or file: {errs:?}");
     }
 
-    app_logger::debug!(urls = ?urls, files = ?files, "Parsed urls and files");
+    debug!(urls = ?urls, files = ?files, "Parsed urls and files");
 
     info!("Outputting to {:?}", cli_config.output_directory);
 
@@ -71,7 +71,7 @@ async fn main() {
             .flatten()
             .collect::<Vec<_>>()
     };
-    app_logger::debug!(urls = ?downloaded_urls, "Downloaded urls");
+    debug!(urls = ?downloaded_urls, "Downloaded urls");
 
     let (downloaded, failed_downloaded) = split_vec_err(downloaded_urls);
     info!(
@@ -86,7 +86,7 @@ async fn main() {
         .chain(files.clone())
         .collect::<Vec<_>>();
 
-    app_logger::debug!(files = ?to_fix, "Files to fix");
+    debug!(files = ?to_fix, "Files to fix");
     info!("Starting fixing of {} files", to_fix.len());
     let fixed_files = {
         let fixed_files = to_fix

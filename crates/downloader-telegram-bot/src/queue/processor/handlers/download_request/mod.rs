@@ -12,7 +12,6 @@ use app_helpers::{
     id::time_thread_id,
     temp_dir::TempDir,
 };
-use app_logger::{debug, info, trace};
 use parking_lot::Mutex;
 use teloxide::{
     net::Download,
@@ -24,7 +23,7 @@ use teloxide::{
     },
 };
 use tokio::fs::File;
-use tracing::{field, Span};
+use tracing::{debug, field, info, trace, Span};
 use url::Url;
 
 const MAX_PAYLOAD_SIZE: u64 = {

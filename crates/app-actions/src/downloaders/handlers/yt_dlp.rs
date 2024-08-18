@@ -8,9 +8,9 @@ use std::{
 
 use app_config::Config;
 use app_helpers::{id::time_id, temp_dir::TempDir, temp_file::TempFile};
-use app_logger::{debug, trace};
 use http::header;
 use tokio::process::Command;
+use tracing::{debug, trace};
 
 use super::{generic, DownloadRequest, DownloadResult, Downloader, DownloaderReturn};
 use crate::common::request::USER_AGENT;

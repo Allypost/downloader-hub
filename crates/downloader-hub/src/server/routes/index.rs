@@ -1,5 +1,6 @@
 use axum::{extract::State, http::StatusCode, routing::any, Router};
 use sea_orm::{prelude::*, Statement};
+use tracing::debug;
 
 use crate::server::{app_response::ApiResponse, AppRouter, AppState};
 
@@ -26,7 +27,7 @@ async fn db_ping(State(state): State<AppState>) -> ApiResponse<i32> {
             .await;
         let elapsed = start.elapsed();
 
-        app_logger::debug!("Database ping took {elapsed:?}");
+        debug!("Database ping took {elapsed:?}");
 
         res
     };

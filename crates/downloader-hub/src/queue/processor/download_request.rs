@@ -7,6 +7,7 @@ use app_entities::{
 };
 use app_helpers::ip::url_resolves_to_valid_ip;
 use sea_orm::{prelude::*, TransactionTrait};
+use tracing::{debug, error, info, warn};
 
 use super::HandlerError;
 use crate::{
@@ -22,7 +23,7 @@ pub(super) async fn handle_download_request(uid: &str) -> Result<(), HandlerErro
     match download(uid).await {
         Ok((request, paths)) => {
             if let Err(e) = add_metadata(request.id, paths).await {
-                app_logger::error!(?request, ?e, "Failed to add metadata");
+                error!(?request, ?e, "Failed to add metadata");
             }
             Ok(())
         }
@@ -35,7 +36,7 @@ pub(super) async fn handle_download_request(uid: &str) -> Result<(), HandlerErro
             .await;
 
             if let Err(e) = err {
-                app_logger::error!(?e, "Failed to update download request");
+                error!(?e, "Failed to update download request");
             }
 
             Err(e)
@@ -49,7 +50,7 @@ pub(super) async fn handle_download_request(uid: &str) -> Result<(), HandlerErro
             .await;
 
             if let Err(e) = err {
-                app_logger::error!(?e, "Failed to update download request");
+                error!(?e, "Failed to update download request");
             }
 
             Err(e)
@@ -59,7 +60,7 @@ pub(super) async fn handle_download_request(uid: &str) -> Result<(), HandlerErro
 
 #[tracing::instrument]
 async fn download(uid: &str) -> Result<(download_request::Model, Vec<AppPath>), HandlerError> {
-    app_logger::info!("Got download request");
+    info!("Got download request");
 
     let db = AppDb::db();
     let (request, client) = DownloadRequestService::find_by_uid_with_client(&db, uid)
@@ -67,7 +68,7 @@ async fn download(uid: &str) -> Result<(download_request::Model, Vec<AppPath>), 
         .map_err(HandlerError::Db)?
         .ok_or_else(|| HandlerError::Fatal("Download request not found".to_string()))?;
 
-    app_logger::debug!(?request, ?client, "Got request and client");
+    debug!(?request, ?client, "Got request and client");
 
     DownloadRequestService::update_status(&db, uid, DownloadRequestStatus::Processing).await?;
 
@@ -80,11 +81,11 @@ async fn download(uid: &str) -> Result<(download_request::Model, Vec<AppPath>), 
 
     let request_meta = request.meta().unwrap_or_default();
 
-    app_logger::debug!(dir = ?download_dir, url = ?download_url.as_str(), "Staring download");
+    debug!(dir = ?download_dir, url = ?download_url.as_str(), "Staring download");
 
     let results = download_file(&download_url, &download_dir).await;
 
-    app_logger::debug!(?results, "Download completed successfully");
+    debug!(?results, "Download completed successfully");
 
     let results = app_helpers::futures::retry_fn(5, || {
         let results = results.clone();
@@ -154,14 +155,14 @@ async fn download(uid: &str) -> Result<(download_request::Model, Vec<AppPath>), 
 }
 
 async fn add_metadata(request_id: i32, paths: Vec<AppPath>) -> Result<(), anyhow::Error> {
-    app_logger::debug!(request_id, ?paths, "Adding metadata");
+    debug!(request_id, ?paths, "Adding metadata");
     let db = AppDb::db();
 
     for file_path in paths {
         let res = DownloadResultService::add_app_meta(&db, request_id, file_path).await;
 
         if let Err(e) = res {
-            app_logger::warn!(?e, "Failed to update app meta");
+            warn!(?e, "Failed to update app meta");
         }
     }
 

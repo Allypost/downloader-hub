@@ -12,6 +12,7 @@ use axum::{
     Router,
 };
 use serde::Deserialize;
+use tracing::{error, trace};
 
 use crate::{
     db::AppDb,
@@ -71,7 +72,7 @@ async fn download_result(
     headers: HeaderMap,
     signature: Query<Signature>,
 ) -> impl IntoResponse {
-    app_logger::trace!(?signature, "Got signature");
+    trace!(?signature, "Got signature");
 
     if let Err(e) = signature.validate(&result_uid) {
         return Err((StatusCode::BAD_REQUEST, format!("Invalid signature: {}", e)).into_response());
@@ -81,7 +82,7 @@ async fn download_result(
     let result = DownloadResultService::find_by_uid(&db, result_uid)
         .await
         .map_err(|e| {
-            app_logger::error!(?e, "Failed to find download result");
+            error!(?e, "Failed to find download result");
 
             (StatusCode::INTERNAL_SERVER_ERROR).into_response()
         })?

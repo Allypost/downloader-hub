@@ -1,10 +1,10 @@
 use std::convert::Into;
 
 use app_helpers::file_time::transferable_file_times;
-use app_logger::{debug, trace, warn};
 pub use common::{FixRequest, FixResult, FixerError, FixerReturn};
 use handlers::FixerInstance;
 pub use handlers::AVAILABLE_FIXERS;
+use tracing::{debug, trace, warn};
 
 mod common;
 pub mod handlers;

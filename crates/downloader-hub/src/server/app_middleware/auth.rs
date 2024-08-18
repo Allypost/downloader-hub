@@ -5,6 +5,7 @@ use app_entities::{client, entity_meta::common::path::AppPath};
 use axum::{extract::Request, http};
 use sea_orm::prelude::*;
 use serde::Deserialize;
+use tracing::trace;
 
 use crate::db::AppDb;
 
@@ -31,11 +32,11 @@ pub async fn add_user_to_request(
     req: &mut Request,
 ) -> Option<CurrentUser> {
     if let Some(user) = get_user_from_request(req) {
-        app_logger::trace!("User already in request");
+        trace!("User already in request");
         return Some(user.to_owned());
     }
 
-    app_logger::trace!("Adding user to request");
+    trace!("Adding user to request");
 
     let auth_key = query.and_then(|x| x.auth_client_key).or_else(|| {
         req.headers()
@@ -44,13 +45,13 @@ pub async fn add_user_to_request(
             .map(ToString::to_string)
     })?;
 
-    app_logger::trace!(key = ?auth_key, "Got authorization");
+    trace!(key = ?auth_key, "Got authorization");
 
     AuthorizationSchema::authorize_from_value(&auth_key)
         .await
         .map(|user| {
             tracing::Span::current().record("user", tracing::field::debug(&user.id));
-            app_logger::trace!("Added user to request");
+            trace!("Added user to request");
             req.extensions_mut().insert(user.clone());
 
             user

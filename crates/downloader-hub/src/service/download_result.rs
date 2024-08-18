@@ -10,6 +10,7 @@ use app_entities::{
 };
 use app_migration::IntoColumnRef;
 use sea_orm::{prelude::*, InsertResult, Set, TryInsertResult, UpdateResult};
+use tracing::{trace, warn};
 
 use crate::service::{file::FileService, id::AppUidFor};
 
@@ -80,14 +81,14 @@ impl DownloadResultService {
         let hash = {
             let now = Instant::now();
             let hash = FileService::file_hash(&file_path).await;
-            app_logger::trace!(?hash, took = ?now.elapsed(), "Calculated file hash");
+            trace!(?hash, took = ?now.elapsed(), "Calculated file hash");
             hash?
         };
 
         let file_type = match FileService::infer_file_type(&file_path).await {
             Ok(x) => Some(x),
             Err(e) => {
-                app_logger::warn!(err = ?e, "Failed to infer file type");
+                warn!(err = ?e, "Failed to infer file type");
                 None
             }
         };

@@ -2,9 +2,9 @@ pub(crate) mod bot;
 pub(crate) mod queue;
 
 use app_config::Config;
-use app_logger::{debug, error};
 use app_tasks::TaskRunner;
 use queue::TaskQueueProcessor;
+use tracing::{debug, error};
 
 #[tokio::main]
 async fn main() {

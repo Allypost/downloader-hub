@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use app_entities::{client, entity_meta::common::path::AppPath};
 use sea_orm::{prelude::*, DeleteResult, Set};
 use serde::Deserialize;
+use tracing::info;
 
 use crate::service::id::AppUidFor;
 
@@ -26,7 +27,7 @@ impl ClientService {
             return Err(ClientCreateError::DownloadFolderNotFolder(folder_path));
         }
 
-        app_logger::info!(client = ?payload, "Adding client");
+        info!(client = ?payload, "Adding client");
         let res = app_entities::client::ActiveModel {
             name: Set(payload.name),
             api_key: Set(AppUidFor::client()),

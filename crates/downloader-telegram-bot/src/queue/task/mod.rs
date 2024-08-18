@@ -1,5 +1,5 @@
-use app_logger::warn;
 use teloxide::types::Message;
+use tracing::warn;
 
 use crate::bot::helpers::status_message::StatusMessage;
 

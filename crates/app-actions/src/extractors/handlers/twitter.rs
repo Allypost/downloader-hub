@@ -1,12 +1,12 @@
 use std::string::ToString;
 
 use app_config::Config;
-use app_logger::{debug, trace};
 use http::{header, HeaderMap};
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::Deserialize;
 use serde_json::json;
+use tracing::{debug, trace};
 use url::{form_urlencoded, Url};
 
 use super::{ExtractInfoRequest, ExtractedInfo, Extractor};
@@ -121,7 +121,7 @@ struct TweetInfo {
     username: String,
     status_id: String,
 }
-#[app_logger::instrument]
+#[tracing::instrument]
 fn get_tweet_info_from_url(url: &str) -> Result<Option<TweetInfo>, String> {
     let caps = match URL_MATCH.captures(url) {
         Some(caps) => caps,
@@ -152,7 +152,7 @@ fn get_tweet_info_from_url(url: &str) -> Result<Option<TweetInfo>, String> {
 #[derive(Debug)]
 struct TweetData(serde_json::Value);
 
-#[app_logger::instrument]
+#[tracing::instrument]
 async fn get_tweet_data(tweet_id: &str) -> Result<TweetData, String> {
     let guest_auth = get_guest_auth().await?;
 
@@ -271,7 +271,7 @@ impl From<TweetMedia> for ExtractedUrlInfo {
     }
 }
 
-#[app_logger::instrument(skip(tweet_data))]
+#[tracing::instrument(skip(tweet_data))]
 fn get_tweet_media_urls(tweet_data: &TweetData) -> Option<Vec<TweetMedia>> {
     #[derive(Debug, Clone, Deserialize)]
     #[allow(dead_code)]
@@ -379,7 +379,7 @@ impl GuestAuth {
     }
 }
 
-#[app_logger::instrument]
+#[tracing::instrument]
 async fn get_guest_auth() -> Result<GuestAuth, String> {
     #[derive(Deserialize)]
     struct GetGuestIdResponse {

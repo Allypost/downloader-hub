@@ -6,9 +6,9 @@ use std::{
 
 use app_config::Config;
 use app_helpers::{ffprobe, file_time::transfer_file_times, trash::move_to_trash};
-use app_logger::{debug, trace};
 use thiserror::Error;
 use tokio::process::Command;
+use tracing::{debug, trace, warn};
 
 use crate::fixers::{
     common::{command::CmdError, FixRequest, FixResult, FixerError},
@@ -142,11 +142,11 @@ async fn do_auto_crop_video(file_path: &Path) -> Result<PathBuf, CropError> {
     }
 
     if let Err(e) = transfer_file_times(file_path, &new_filename) {
-        app_logger::warn!("Failed to transfer file times of {file_path:?}: {e:?}");
+        warn!("Failed to transfer file times of {file_path:?}: {e:?}");
     }
 
     if let Err(e) = move_to_trash(file_path) {
-        app_logger::warn!("Failed to move file {file_path:?} to trash: {e:?}");
+        warn!("Failed to move file {file_path:?} to trash: {e:?}");
     }
 
     Ok(new_filename)

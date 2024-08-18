@@ -1,6 +1,7 @@
 use std::string::ToString;
 
 use thiserror::Error;
+use tracing::{debug, error, info, warn};
 
 use super::task::Task;
 use crate::queue::{task::TaskInfo, TASK_QUEUE};
@@ -34,10 +35,10 @@ impl HandlerError {
 pub struct TaskQueueProcessor;
 impl TaskQueueProcessor {
     pub async fn run() {
-        app_logger::info!("Starting download request processor");
+        info!("Starting download request processor");
         loop {
             let task = TASK_QUEUE.pop().await;
-            app_logger::debug!(?task, "Got task");
+            debug!(?task, "Got task");
             handle_task(&task).await;
         }
     }
@@ -55,7 +56,7 @@ async fn handle_task(task: &Task) {
     let err = match res {
         Ok(()) => {
             if let Ok(took) = task.time_since_added().to_std() {
-                app_logger::info!("Task completed after {:?}", took);
+                info!("Task completed after {:?}", took);
             }
             return;
         }
@@ -63,10 +64,10 @@ async fn handle_task(task: &Task) {
         Err(e) => e,
     };
 
-    app_logger::warn!(?err, "Got error processing task");
+    warn!(?err, "Got error processing task");
 
     if let Err(e) = should_retry(task, err) {
-        app_logger::error!(?e, "Task will not be retried");
+        error!(?e, "Task will not be retried");
         return;
     }
 

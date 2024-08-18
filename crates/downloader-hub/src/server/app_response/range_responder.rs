@@ -15,6 +15,7 @@ use axum::{
 };
 use chrono::{DateTime, Utc};
 use tower_http::services::ServeFile;
+use tracing::warn;
 
 use crate::service::file::FileService;
 
@@ -155,7 +156,7 @@ impl RangeResponder {
         let mut response = match response {
             Ok(response) => response,
             Err(e) => {
-                app_logger::warn!(?e, "Failed to serve file");
+                warn!(?e, "Failed to serve file");
 
                 return (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response();
             }

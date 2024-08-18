@@ -1,7 +1,7 @@
 use std::{collections::HashMap, iter::Iterator};
 
-use app_logger::{debug, trace};
 use serde::Deserialize;
+use tracing::{debug, trace};
 use url::Url;
 
 use super::{node_info::NodeInfo, APHandler, HandleResult};

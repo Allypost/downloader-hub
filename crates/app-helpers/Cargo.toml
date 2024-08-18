@@ -10,7 +10,6 @@ license.workspace = true
 anyhow = "1.0.86"
 base64 = "0.22.1"
 app-config.workspace = true
-app-logger.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 trash = "5.0.0"
@@ -29,6 +28,7 @@ iprange = "0.6.7"
 once_cell.workspace = true
 dns-lookup = "2.0.4"
 filetime = "0.2.24"
+tracing.workspace = true
 
 [lints]
 workspace = true

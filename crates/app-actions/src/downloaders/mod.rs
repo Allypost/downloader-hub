@@ -11,8 +11,8 @@ mod common;
 pub mod handlers;
 mod helpers;
 
-use app_logger::{debug, info};
 pub use handlers::AVAILABLE_DOWNLOADERS;
+use tracing::{debug, info};
 
 #[async_trait::async_trait]
 pub trait Downloader: Debug + Send + Sync {

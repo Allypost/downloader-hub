@@ -9,11 +9,11 @@ use app_helpers::{
     temp_dir::TempDir,
     trash::move_to_trash,
 };
-use app_logger::{debug, error, trace};
 use futures::future::BoxFuture;
 use image::ColorType;
 use thiserror::Error;
 use tokio::{fs, process::Command};
+use tracing::{debug, error, trace};
 
 use crate::fixers::{
     common::{FixRequest, FixResult, FixerError},

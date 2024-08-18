@@ -181,7 +181,6 @@ dependencies = [
  "anyhow",
  "app-config",
  "app-helpers",
- "app-logger",
  "async-trait",
  "encoding_rs",
  "filetime",
@@ -250,7 +249,6 @@ dependencies = [
  "addr",
  "anyhow",
  "app-config",
- "app-logger",
  "base64 0.22.1",
  "dns-lookup",
  "file-format",
@@ -265,6 +263,7 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tokio",
+ "tracing",
  "trash",
  "tree_magic_mini",
  "tryhard",
@@ -295,7 +294,6 @@ version = "0.6.0"
 dependencies = [
  "anyhow",
  "app-config",
- "app-logger",
  "tokio",
  "tracing",
 ]
@@ -1411,7 +1409,6 @@ version = "0.6.0"
 dependencies = [
  "app-actions",
  "app-config",
- "app-logger",
  "futures",
  "tokio",
  "tracing",
