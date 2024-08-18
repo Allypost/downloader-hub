@@ -175,8 +175,46 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b3d1d046238990b9cf5bcde22a3fb3584ee5cf65fb2765f454ed428c7a0063da"
 
 [[package]]
+name = "app-actions"
+version = "0.6.0"
+dependencies = [
+ "anyhow",
+ "app-config",
+ "app-helpers",
+ "app-logger",
+ "async-trait",
+ "encoding_rs",
+ "filetime",
+ "form_urlencoded",
+ "fs_extra",
+ "futures",
+ "http 1.1.0",
+ "http-serde",
+ "image",
+ "infer",
+ "language-tags",
+ "mime2ext",
+ "num_cpus",
+ "once_cell",
+ "percent-encoding",
+ "rayon",
+ "regex",
+ "reqwest 0.12.5",
+ "resolve-path",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tl",
+ "tokio",
+ "tracing",
+ "unicode-segmentation",
+ "url",
+ "zip",
+]
+
+[[package]]
 name = "app-config"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -193,36 +231,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "app-downloader"
-version = "0.5.0"
-dependencies = [
- "anyhow",
- "app-config",
- "app-fixers",
- "app-helpers",
- "app-logger",
- "async-trait",
- "form_urlencoded",
- "http 1.1.0",
- "http-serde",
- "mime2ext",
- "once_cell",
- "rayon",
- "regex",
- "reqwest 0.12.5",
- "serde",
- "serde_json",
- "thiserror",
- "tl",
- "tracing",
- "unicode-segmentation",
- "url",
- "zip",
-]
-
-[[package]]
 name = "app-entities"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -234,29 +244,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "app-fixers"
-version = "0.5.0"
-dependencies = [
- "anyhow",
- "app-config",
- "app-helpers",
- "app-logger",
- "async-trait",
- "filetime",
- "fs_extra",
- "futures",
- "image",
- "infer",
- "once_cell",
- "rayon",
- "resolve-path",
- "thiserror",
- "tokio",
-]
-
-[[package]]
 name = "app-helpers"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "addr",
  "anyhow",
@@ -265,6 +254,7 @@ dependencies = [
  "base64 0.22.1",
  "dns-lookup",
  "file-format",
+ "filetime",
  "futures",
  "infer",
  "ipnet",
@@ -283,7 +273,7 @@ dependencies = [
 
 [[package]]
 name = "app-logger"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "tracing",
  "tracing-subscriber",
@@ -291,7 +281,7 @@ dependencies = [
 
 [[package]]
 name = "app-migration"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "async-std",
  "hex",
@@ -301,7 +291,7 @@ dependencies = [
 
 [[package]]
 name = "app-tasks"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "anyhow",
  "app-config",
@@ -1417,11 +1407,10 @@ checksum = "1aaf95b3e5c8f23aa320147307562d361db0ae0d51242340f558153b4eb2439b"
 
 [[package]]
 name = "downloader-cli"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
+ "app-actions",
  "app-config",
- "app-downloader",
- "app-fixers",
  "app-logger",
  "futures",
  "tokio",
@@ -1432,13 +1421,12 @@ dependencies = [
 
 [[package]]
 name = "downloader-hub"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "anyhow",
+ "app-actions",
  "app-config",
- "app-downloader",
  "app-entities",
- "app-fixers",
  "app-helpers",
  "app-logger",
  "app-migration",
@@ -1468,12 +1456,11 @@ dependencies = [
 
 [[package]]
 name = "downloader-telegram-bot"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "anyhow",
+ "app-actions",
  "app-config",
- "app-downloader",
- "app-fixers",
  "app-helpers",
  "app-logger",
  "app-tasks",
@@ -2456,6 +2443,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "language-tags"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d4345964bb142484797b161f473a503a434de77149dd8c7427788c6e13379388"
+
+[[package]]
 name = "lazy_static"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2630,9 +2623,9 @@ checksum = "6877bb514081ee2a7ff5ef9de3281f14a4dd4bceac4c09388074a6b5df8a139a"
 
 [[package]]
 name = "mime2ext"
-version = "0.1.52"
+version = "0.1.53"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1a85a5069ebd40e64b1985773cc81addbe9d90d7ecf60e7b5475a57ad584c70"
+checksum = "515a63dc9666c865e848b043ab52fe9a5c713ae89cde4b5fbaae67cfd614b93a"
 
 [[package]]
 name = "mime_guess"
@@ -4077,7 +4070,6 @@ version = "1.0.122"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "784b6203951c57ff748476b126ccb5e8e2959a5c19e5c617ab1956be3dbc68da"
 dependencies = [
- "indexmap",
  "itoa",
  "memchr",
  "ryu",

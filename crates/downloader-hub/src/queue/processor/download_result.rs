@@ -1,3 +1,4 @@
+use app_actions::fix_file;
 use app_entities::entity_meta::{
     common::path::AppPath,
     download_result::{DownloadResultMeta, DownloadResultStatus},
@@ -67,7 +68,7 @@ async fn fix(request_id: i32, app_path: AppPath) -> Result<(), HandlerError> {
     )
     .await?;
 
-    let new_path = app_fixers::fix_file(&path).await;
+    let new_path = fix_file(&path).await;
 
     match new_path {
         Err(e) => {
@@ -80,15 +81,7 @@ async fn fix(request_id: i32, app_path: AppPath) -> Result<(), HandlerError> {
             .await?;
         }
         Ok(new_path) => {
-            // TODO: Fix this to allow multiple new paths
-            let new_path = match new_path.first() {
-                Some(new_path) => new_path,
-                None => {
-                    return Err(HandlerError::Fatal(
-                        "Fixer returned no new paths".to_string(),
-                    ))
-                }
-            };
+            let new_path = &new_path.file_path;
             app_helpers::futures::retry_fn(5, || async {
                 let path = path.clone();
                 let new_path = new_path.clone();

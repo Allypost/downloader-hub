@@ -28,6 +28,7 @@ ipnet = "2.9.0"
 iprange = "0.6.7"
 once_cell.workspace = true
 dns-lookup = "2.0.4"
+filetime = "0.2.24"
 
 [lints]
 workspace = true

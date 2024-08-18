@@ -1,8 +1,14 @@
-use std::{collections::HashMap, fmt::Debug, path::PathBuf, result::Result};
+use std::{collections::HashSet, fmt::Debug, path::PathBuf, result::Result};
 
+use app_actions::{
+    actions::{
+        handlers::{file_rename_to_id::RenameToId, split_scenes::SplitScenes},
+        Action, ActionRequest,
+    },
+    download_file, fix_file,
+};
 use app_config::Config;
-use app_downloader::downloaders::DownloadFileRequest;
-use app_fixers::Fixer;
+use app_logger::{error, info};
 use tracing_subscriber::{filter::LevelFilter, util::SubscriberInitExt};
 
 #[tokio::main]
@@ -44,41 +50,31 @@ async fn main() {
         app_logger::warn!("Failed to parse {x:?} as URL or file: {errs:?}");
     }
 
-    let urls = urls.into_iter().map(|x| x.to_string()).collect::<Vec<_>>();
-
     app_logger::debug!(urls = ?urls, files = ?files, "Parsed urls and files");
 
-    app_logger::info!("Outputting to {:?}", cli_config.output_directory);
+    info!("Outputting to {:?}", cli_config.output_directory);
 
-    app_logger::info!("Starting download");
+    info!("Starting download");
     let downloaded_urls = {
-        let downloaded_urls = urls
-            .into_iter()
-            .map(|url| async move {
-                tokio::task::spawn_blocking(move || {
-                    app_downloader::download_file(&DownloadFileRequest::new(
-                        &url,
-                        &cli_config.output_directory,
-                    ))
-                    .into_iter()
-                    .map(|x| x.map_err(|e| (url.to_string(), e)))
-                    .collect::<Vec<_>>()
-                })
+        let downloaded_urls = urls.into_iter().map(|url| async move {
+            let url_str = url.to_string();
+            download_file(url, &cli_config.output_directory)
                 .await
-            })
-            .collect::<Vec<_>>();
+                .into_iter()
+                .map(|x| x.map_err(|e| (url_str.clone(), e)))
+                .collect::<Vec<_>>()
+        });
 
         futures::future::join_all(downloaded_urls)
             .await
             .into_iter()
-            .flatten()
             .flatten()
             .collect::<Vec<_>>()
     };
     app_logger::debug!(urls = ?downloaded_urls, "Downloaded urls");
 
     let (downloaded, failed_downloaded) = split_vec_err(downloaded_urls);
-    app_logger::info!(
+    info!(
         "Download completed: downloaded {} files, failed to download {} files",
         downloaded.len(),
         failed_downloaded.len()
@@ -91,12 +87,12 @@ async fn main() {
         .collect::<Vec<_>>();
 
     app_logger::debug!(files = ?to_fix, "Files to fix");
-    app_logger::info!("Starting fixing of {} files", to_fix.len());
+    info!("Starting fixing of {} files", to_fix.len());
     let fixed_files = {
         let fixed_files = to_fix
             .into_iter()
             .map(|x| async move {
-                app_fixers::fix_file(&x)
+                fix_file(&x)
                     .await
                     .map(|n| (x.clone(), n))
                     .map_err(|e| (x, e))
@@ -107,7 +103,7 @@ async fn main() {
     };
 
     let (fixed, failed_fixed) = split_vec_err(fixed_files);
-    app_logger::info!(
+    info!(
         "Fixing completed: fixed {} files, failed to fix {} files",
         fixed.len(),
         failed_fixed.len()
@@ -115,17 +111,23 @@ async fn main() {
 
     if cli_config.and_rename {
         let files_set = {
-            let mut new = std::collections::HashSet::new();
+            let mut new = HashSet::new();
             new.extend(files);
             new
         };
 
         for (old, new) in &fixed {
             if files_set.contains(old) {
-                for f in new {
-                    if let Err(e) = app_fixers::fixer::file_rename_to_id::rename_file_to_id(f) {
-                        app_logger::error!("Failed to rename {f:?}: {e:?}");
+                let req = match ActionRequest::in_same_dir(new.file_path.clone()) {
+                    Some(x) => x,
+                    None => {
+                        error!("Failed to get request for {new:?}");
+                        continue;
                     }
+                };
+
+                if let Err(e) = RenameToId.run(&req).await {
+                    error!("Failed to rename {new:?}: {e:?}");
                 }
             }
         }
@@ -135,21 +137,13 @@ async fn main() {
         .into_iter()
         .flatten()
         .collect::<Vec<_>>();
-    app_logger::info!("Starting split of {} files", split_files.len());
+    info!("Starting split of {} files", split_files.len());
     let mut failed_split = vec![];
     for f in split_files {
-        if let Err(e) = app_fixers::fixer::split_scenes::SplitScenes.run(
-            &f,
-            &HashMap::from_iter([(
-                "output-dir".to_string(),
-                cli_config
-                    .output_directory
-                    .as_os_str()
-                    .to_string_lossy()
-                    .to_string(),
-            )]),
-        ) {
-            app_logger::error!("Failed to split {f:?}: {e}");
+        let req = ActionRequest::new(f.clone(), cli_config.output_directory.clone());
+
+        if let Err(e) = SplitScenes.run(&req).await {
+            error!("Failed to split {f:?}: {e}");
             failed_split.push((f.clone(), e));
             continue;
         }
@@ -157,15 +151,15 @@ async fn main() {
 
     if !failed_downloaded.is_empty() || !failed_fixed.is_empty() || !failed_split.is_empty() {
         for (x, e) in failed_downloaded {
-            app_logger::error!("Failed to download {x:?}: {e}");
+            error!("Failed to download {x:?}: {e}");
         }
 
         for (x, e) in failed_fixed {
-            app_logger::error!("Failed to fix {x:?}: {e}");
+            error!("Failed to fix {x:?}: {e}");
         }
 
         for (x, e) in failed_split {
-            app_logger::error!("Failed to split {x:?}: {e}");
+            error!("Failed to split {x:?}: {e}");
         }
 
         std::process::exit(1);
@@ -191,9 +185,9 @@ fn print_errors<T: Sized>(name: &str, maybe_errors: Vec<Result<T, String>>) -> V
 
     if !errors.is_empty() {
         let err = format!("Errors parsing {}", name);
-        app_logger::error!(err);
+        error!(err);
         for error in errors {
-            app_logger::error!("{error}");
+            error!("{error}");
         }
         std::process::exit(1);
     }

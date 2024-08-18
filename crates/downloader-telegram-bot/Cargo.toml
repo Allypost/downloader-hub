@@ -8,9 +8,8 @@ license.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+app-actions.workspace = true
 app-config = { workspace = true, features = ["telegram-bot"] }
-app-downloader.workspace = true
-app-fixers.workspace = true
 app-helpers.workspace = true
 app-logger.workspace = true
 app-tasks.workspace = true

@@ -8,10 +8,9 @@ license.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+app-actions.workspace = true
 app-config = { workspace = true, features = ["server"] }
-app-downloader.workspace = true
 app-entities = { version = "*", path = "../app-entities" }
-app-fixers.workspace = true
 app-helpers.workspace = true
 app-logger.workspace = true
 app-migration = { version = "*", path = "../app-migration" }

@@ -42,7 +42,7 @@ pub enum HandlerError {
     #[error("Fatal error: `{0}`")]
     Fatal(String),
     #[error("Failed to fix: `{0}`")]
-    FixFailed(#[from] app_fixers::error::FixerError),
+    FixFailed(#[from] app_actions::fixers::FixerError),
 }
 impl HandlerError {
     pub const fn is_fatal(&self) -> bool {

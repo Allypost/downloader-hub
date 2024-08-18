@@ -2,6 +2,7 @@ use std::{collections::HashMap, io, num, path::Path, process, time};
 
 use app_config::Config;
 use serde::{Deserialize, Serialize};
+use tokio::process::Command;
 
 pub fn ffprobe(path: impl AsRef<Path>) -> Result<FfProbeResult, FfProbeError> {
     ffprobe_config(
@@ -10,6 +11,51 @@ pub fn ffprobe(path: impl AsRef<Path>) -> Result<FfProbeResult, FfProbeError> {
         },
         path,
     )
+}
+pub async fn ffprobe_async<T>(path: T) -> Result<FfProbeResult, FfProbeError>
+where
+    T: AsRef<Path> + Send,
+{
+    ffprobe_config_async(
+        FfprobeConfig {
+            count_frames: false,
+        },
+        path,
+    )
+    .await
+}
+
+pub async fn ffprobe_config_async<T>(
+    config: FfprobeConfig,
+    path: T,
+) -> Result<FfProbeResult, FfProbeError>
+where
+    T: AsRef<Path> + Send,
+{
+    let path = path.as_ref();
+
+    let ffprobe_path = Config::global().dependency_paths.ffprobe_path();
+    let mut cmd = Command::new(ffprobe_path);
+    {
+        cmd.args(["-v", "quiet"])
+            .args(["-print_format", "json=c=1"])
+            .arg("-show_format")
+            .arg("-show_streams");
+
+        if config.count_frames {
+            cmd.arg("-count_frames");
+        }
+
+        cmd.arg(path);
+    }
+
+    let out = cmd.output().await.map_err(FfProbeError::Io)?;
+
+    if !out.status.success() {
+        return Err(FfProbeError::Status(out));
+    }
+
+    serde_json::from_slice::<FfProbeResult>(&out.stdout).map_err(FfProbeError::Deserialize)
 }
 
 pub fn ffprobe_config(

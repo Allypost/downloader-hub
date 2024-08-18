@@ -2,8 +2,8 @@ pub mod helpers;
 
 use std::string::ToString;
 
+use app_actions::{downloaders::AVAILABLE_DOWNLOADERS, fixers::AVAILABLE_FIXERS};
 use app_config::Config;
-use app_downloader::handler::DownloadHandler;
 use app_logger::{info, trace};
 use helpers::status_message::StatusMessage;
 use once_cell::sync::OnceCell;
@@ -194,9 +194,8 @@ async fn handle_command(msg: Message, command: BotCommand) -> ResponseResult<()>
                 .await?;
         }
         BotCommand::ListDownloaders => {
-            let downloaders_text = app_downloader::default_download_handlers()
+            let downloaders_text = AVAILABLE_DOWNLOADERS
                 .iter()
-                .map(DownloadHandler::handler)
                 .map(|x| format!("<u>{}</u>\n{}", x.name(), x.description()))
                 .collect::<Vec<_>>()
                 .join("\n\n");
@@ -211,7 +210,7 @@ async fn handle_command(msg: Message, command: BotCommand) -> ResponseResult<()>
                 .await?;
         }
         BotCommand::ListFixers => {
-            let fixers_text = app_fixers::default_fixers()
+            let fixers_text = AVAILABLE_FIXERS
                 .iter()
                 .map(|x| format!("<u>{}</u>\n{}", x.name(), x.description()))
                 .collect::<Vec<_>>()

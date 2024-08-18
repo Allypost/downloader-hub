@@ -5,6 +5,7 @@ use std::{
     sync::Arc,
 };
 
+use app_actions::{download_file, fix_file};
 use app_config::Config;
 use app_helpers::{
     file_type::{infer_file_type, mime},
@@ -227,11 +228,11 @@ async fn fix_files(
         }
 
         trace!(?path, "Fixing file");
-        let res = app_fixers::fix_file(path).await;
+        let res = fix_file(path).await;
         trace!(?res, "Fixed file");
 
         match res {
-            Ok(fixed) => fixed_file_paths.extend(fixed),
+            Ok(fixed) => fixed_file_paths.push(fixed.file_path),
             Err(e) => fix_errors.push(e.to_string()),
         }
     }
@@ -505,23 +506,13 @@ async fn download_files_from_urls(
     download_dir: &Path,
 ) -> (Vec<PathBuf>, Vec<String>) {
     let results = {
-        let futs = file_urls.iter().map(|url| {
-            let temp_download_dir = download_dir.to_path_buf();
-            let url = url.to_string();
+        let futs = file_urls.iter().map(|url| async move {
+            let res = download_file(url, download_dir).await;
 
-            tokio::task::spawn_blocking(move || {
-                let dl_req =
-                    app_downloader::downloaders::DownloadFileRequest::new(&url, &temp_download_dir);
-
-                (url, app_downloader::download_file(&dl_req))
-            })
+            (url.to_string(), res)
         });
 
-        futures::future::join_all(futs)
-            .await
-            .into_iter()
-            .flatten()
-            .collect::<Vec<_>>()
+        futures::future::join_all(futs).await
     };
 
     let mut downloaded_paths = vec![];

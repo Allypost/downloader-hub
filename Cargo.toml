@@ -10,9 +10,8 @@ edition = "2021"
 license = "MPL-2.0"
 
 [workspace.dependencies]
+app-actions = { version = "*", path = "crates/app-actions" }
 app-config = { version = "*", path = "crates/app-config" }
-app-downloader = { version = "*", path = "crates/app-downloader" }
-app-fixers = { version = "*", path = "crates/app-fixers" }
 app-helpers = { version = "*", path = "crates/app-helpers" }
 app-logger = { version = "*", path = "crates/app-logger" }
 app-tasks = { version = "*", path = "crates/app-tasks" }

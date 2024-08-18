@@ -1,5 +1,6 @@
-use std::{convert::Into, result::Result};
+use std::result::Result;
 
+use app_actions::download_file;
 use app_entities::{
     download_request,
     entity_meta::{common::path::AppPath, download_result::DownloadResultStatus},
@@ -56,8 +57,9 @@ pub(super) async fn handle_download_request(uid: &str) -> Result<(), HandlerErro
     }
 }
 
+#[tracing::instrument]
 async fn download(uid: &str) -> Result<(download_request::Model, Vec<AppPath>), HandlerError> {
-    app_logger::info!(?uid, "Got download request");
+    app_logger::info!("Got download request");
 
     let db = AppDb::db();
     let (request, client) = DownloadRequestService::find_by_uid_with_client(&db, uid)
@@ -73,30 +75,14 @@ async fn download(uid: &str) -> Result<(download_request::Model, Vec<AppPath>), 
         .resolve_download_folder()
         .map_err(|e| HandlerError::Fatal(e.to_string()))?;
     let download_url = request.url.clone();
-
-    if let Err(e) = url_resolves_to_valid_ip(&download_url) {
-        return Err(HandlerError::Fatal(e.to_string()));
-    }
+    let download_url =
+        url_resolves_to_valid_ip(&download_url).map_err(|e| HandlerError::Fatal(e.to_string()))?;
 
     let request_meta = request.meta().unwrap_or_default();
-    let results = tokio::task::spawn_blocking(move || {
-        app_logger::debug!(dir = ?download_dir, url = ?download_url, "Staring download");
 
-        app_downloader::download_file(&app_downloader::downloaders::DownloadFileRequest {
-            download_dir,
-            original_url: download_url,
-            headers: request_meta.request.headers,
-            method: request_meta.request.method,
-        })
-    })
-    .await;
+    app_logger::debug!(dir = ?download_dir, url = ?download_url.as_str(), "Staring download");
 
-    let results = match results {
-        Ok(x) => x,
-        Err(e) => {
-            return Err(e.into());
-        }
-    };
+    let results = download_file(&download_url, &download_dir).await;
 
     app_logger::debug!(?results, "Download completed successfully");
 
