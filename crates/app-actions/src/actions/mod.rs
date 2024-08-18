@@ -8,6 +8,7 @@ pub use common::{
     action_request::{ActionOptions, ActionRequest},
     action_result::ActionResult,
 };
+pub use handlers::AVAILABLE_ACTIONS;
 
 #[async_trait::async_trait]
 pub trait Action: Debug + Send + Sync {
