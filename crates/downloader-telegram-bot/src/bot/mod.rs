@@ -1,10 +1,12 @@
 pub mod helpers;
 
-use std::string::ToString;
+use std::{collections::HashMap, string::ToString};
 
 use app_actions::{
-    actions::AVAILABLE_ACTIONS, downloaders::AVAILABLE_DOWNLOADERS,
-    extractors::AVAILABLE_EXTRACTORS, fixers::AVAILABLE_FIXERS,
+    actions::AVAILABLE_ACTIONS,
+    downloaders::AVAILABLE_DOWNLOADERS,
+    extractors::AVAILABLE_EXTRACTORS,
+    fixers::{handlers::FixerInstance, AVAILABLE_FIXERS},
 };
 use app_config::Config;
 use helpers::status_message::StatusMessage;
@@ -19,7 +21,7 @@ use teloxide::{
 use tracing::{field, info, trace, Instrument, Span};
 use url::Url;
 
-use crate::queue::{task::Task, TaskQueue};
+use crate::queue::{Task, TaskQueue};
 
 pub type TeloxideBot =
     teloxide::adaptors::CacheMe<trace::Trace<teloxide::adaptors::DefaultParseMode<teloxide::Bot>>>;
@@ -69,11 +71,37 @@ enum BotCommand {
     ListActions,
     #[command(description = "Responds with 'Pong!'")]
     Ping,
+    #[command(
+        description = "Run the specified fixers on the message.",
+        parse_with = parse_fixers,
+    )]
+    Fix(Vec<FixerInstance>),
     // #[command(
     //     description = "Split the video into scenes (best effort). Must be a reply to a video \
     //                    message or text of a video message."
     // )]
     // SplitScenes,
+}
+
+struct CmdFixParams(Vec<FixerInstance>);
+#[allow(clippy::unnecessary_wraps)]
+#[allow(clippy::needless_pass_by_value)]
+fn parse_fixers(s: String) -> Result<CmdFixParams, teloxide::utils::command::ParseError> {
+    let name_to_instance = AVAILABLE_FIXERS
+        .iter()
+        .map(|x| (x.name(), x.clone()))
+        .collect::<HashMap<_, _>>();
+
+    let res = s
+        .split(' ')
+        .map(str::trim)
+        .filter(|x| !x.is_empty())
+        .map(|x| x.split_once('=').unwrap_or((x, "")))
+        .filter_map(|(name, _params)| name_to_instance.get(name))
+        .cloned()
+        .collect();
+
+    Ok(CmdFixParams(res))
 }
 
 pub async fn run() -> anyhow::Result<()> {
@@ -317,6 +345,17 @@ async fn handle_command(msg: Message, command: BotCommand) -> ResponseResult<()>
                 .send_message(msg.chat.id, "Pong!")
                 .reply_parameters(ReplyParameters::new(msg.id).allow_sending_without_reply())
                 .await?;
+        }
+        BotCommand::Fix(fixers) => {
+            info!(?fixers, "Adding fix request to queue");
+
+            let mut status_message = StatusMessage::from_message(&msg);
+
+            status_message
+                .update_message("Message queued. Waiting for spot in line...")
+                .await?;
+
+            TaskQueue::push(Task::fix_request(msg, fixers, status_message));
         }
     }
 

@@ -1,44 +1,17 @@
-use std::{
-    collections::HashMap,
-    fs::Metadata,
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::path::{Path, PathBuf};
 
 use app_actions::{download_file, fix_file};
 use app_config::Config;
-use app_helpers::{
-    file_type::{infer_file_type, mime},
-    id::time_thread_id,
-    temp_dir::TempDir,
-};
+use app_helpers::temp_dir::TempDir;
 use futures::{stream::FuturesUnordered, StreamExt};
-use parking_lot::Mutex;
-use teloxide::{
-    net::Download,
-    payloads::SendMediaGroupSetters,
-    prelude::{Request, Requester},
-    types::{
-        InputFile, InputMedia, InputMediaAudio, InputMediaDocument, InputMediaPhoto,
-        InputMediaVideo, MediaKind, Message, MessageEntityKind, MessageKind, PhotoSize,
-        ReplyParameters,
-    },
-};
-use tokio::fs::File;
+use teloxide::types::Message;
 use tracing::{debug, field, info, trace, Span};
 use url::Url;
 
-const MAX_PAYLOAD_SIZE: u64 = {
-    let kb = 1000;
-    let mb = kb * 1000;
-
-    50 * mb
-};
-
 use super::{Handler, HandlerError, HandlerReturn};
-use crate::{
-    bot::TelegramBot,
-    queue::task::{Task, TaskInfo},
+use crate::queue::{
+    common::{file::FileId, urls::urls_in_message},
+    task::{Task, TaskInfo},
 };
 
 #[derive(Debug)]
@@ -59,11 +32,8 @@ impl Handler for DownloadRequestHandler {
         task.update_status_message("Processing the request...")
             .await;
 
-        let msg = match task.info() {
-            TaskInfo::DownloadRequest { message } => message,
-
-            #[allow(unreachable_patterns)]
-            _ => return Err(HandlerError::Fatal("Invalid task info".to_string())),
+        let TaskInfo::DownloadRequest { message: msg } = task.info() else {
+            return Err(HandlerError::Fatal("Invalid task info".to_string()));
         };
 
         trace!(?msg, "Got message from task");
@@ -119,7 +89,9 @@ impl Handler for DownloadRequestHandler {
             }
         }
 
-        send_files_to_telegram(task, fixed_file_paths).await?;
+        task.reply_with_files(fixed_file_paths)
+            .await
+            .map_err(HandlerError::Fatal)?;
 
         trace!("Deleting status message");
         let _ = task.status_message().delete_message().await;
@@ -149,66 +121,6 @@ async fn copy_files_to_save_dir(fixed_file_paths: Vec<PathBuf>) -> Result<(), Ha
             .map_err(|e| HandlerError::Fatal(e.to_string()))?;
 
         trace!(?file, ?dest, "Copied file to download directory");
-    }
-
-    Ok(())
-}
-
-#[tracing::instrument(skip_all)]
-async fn send_files_to_telegram(
-    task: &Task,
-    fixed_file_paths: Vec<PathBuf>,
-) -> Result<(), HandlerError> {
-    trace!("Chunking files by size");
-    let (media_groups, failed_files) =
-        files_to_input_media_groups(fixed_file_paths, MAX_PAYLOAD_SIZE / 10 * 8).await;
-    trace!(?media_groups, ?failed_files, "Chunked files by size");
-
-    debug!("Uploading files to Telegram");
-    for media_group in media_groups {
-        trace!(?media_group, "Uploading media group");
-
-        TelegramBot::instance()
-            .send_media_group(task.status_message().chat_id(), media_group)
-            .reply_parameters(
-                ReplyParameters::new(task.status_message().msg_replying_to_id())
-                    .allow_sending_without_reply(),
-            )
-            .send()
-            .await
-            .map_err(|x| HandlerError::Fatal(x.to_string()))?;
-
-        trace!("Uploaded media group");
-    }
-    debug!("Uploaded files to Telegram");
-
-    if !failed_files.is_empty() {
-        debug!(?failed_files, "Failed to chunk some files to size");
-        trace!("Generating failed files message");
-        let failed_files_msg = {
-            let mut msg = "Failed to upload some files:\n\n".to_string();
-
-            msg += failed_files
-                .into_iter()
-                .map(|(file, reason)| {
-                    format!(
-                        " - File: {}\n   Reason: {}\n",
-                        file.file_name().unwrap_or_default().to_string_lossy(),
-                        reason
-                    )
-                })
-                .reduce(|a, b| a + "\n" + &b)
-                .unwrap_or_default()
-                .as_str();
-
-            msg
-        };
-        trace!(msg = ?failed_files_msg, "Failed files message generated");
-
-        trace!("Sending failed files message");
-        task.send_additional_status_message(failed_files_msg.trim())
-            .await;
-        trace!("Failed files message sent");
     }
 
     Ok(())
@@ -264,8 +176,8 @@ async fn download_files(
     task: &Task,
     msg: &Message,
 ) -> Result<Vec<PathBuf>, HandlerError> {
-    let file_id = file_id_from_message(msg);
-    let file_urls = file_urls_from_message(msg);
+    let file_id = FileId::from_message(msg);
+    let file_urls = urls_in_message(msg);
 
     if file_id.is_none() && file_urls.is_empty() {
         return Ok(vec![]);
@@ -281,7 +193,8 @@ async fn download_files(
             .await;
 
         trace!(?file_id, "Downloading file from telegram");
-        let download_file_path = download_file_by_id(&file_id, download_dir)
+        let download_file_path = file_id
+            .download(download_dir)
             .await
             .map_err(HandlerError::Fatal)?;
         trace!(?download_file_path, "Downloaded file from telegram");
@@ -309,196 +222,6 @@ async fn download_files(
     }
 
     Ok(paths_to_fix)
-}
-
-#[tracing::instrument(skip_all)]
-async fn files_to_input_media_groups<TFiles, TFile>(
-    files: TFiles,
-    max_size: u64,
-) -> (Vec<Vec<InputMedia>>, Vec<(PathBuf, String)>)
-where
-    TFiles: IntoIterator<Item = TFile> + Send + std::fmt::Debug,
-    TFile: AsRef<Path> + Into<PathBuf> + Clone,
-{
-    #[derive(Debug)]
-    struct FileInfo {
-        path: PathBuf,
-        metadata: Metadata,
-        mime: Option<mime::Mime>,
-    }
-
-    #[derive(Debug)]
-    struct FileInfoWithMedia {
-        file_info: FileInfo,
-        media: InputMedia,
-    }
-
-    fn chunk(
-        items: Vec<FileInfoWithMedia>,
-        max_size: u64,
-    ) -> (Vec<Vec<FileInfoWithMedia>>, Vec<(PathBuf, String)>) {
-        let mut failed = vec![];
-        let mut res = vec![];
-        let mut res_size = 0_u64;
-        let mut res_item = vec![];
-        for item in items {
-            let path = item.file_info.path.clone();
-            let size = item.file_info.metadata.len();
-
-            if res_item.len() >= 10 {
-                res.push(res_item);
-                res_item = vec![];
-                res_size = 0;
-            }
-
-            if size > max_size {
-                trace!(?path, ?size, ?max_size, "File is too large");
-                {
-                    failed.push((path, format!("file is too large: {} > {}", size, max_size)));
-                }
-                continue;
-            }
-
-            if size + res_size > MAX_PAYLOAD_SIZE {
-                res.push(res_item);
-                res_size = 0;
-                res_item = vec![];
-            }
-
-            res_item.push(item);
-            res_size += size;
-        }
-
-        if !res_item.is_empty() {
-            res.push(res_item);
-        }
-
-        (res, failed)
-    }
-
-    let failed = Arc::new(Mutex::new(Vec::new()));
-    trace!(?files, "Getting file infos");
-    let file_info = files
-        .into_iter()
-        .map(|x| x.as_ref().to_path_buf())
-        .map(|file_path| {
-            let failed = failed.clone();
-
-            async move {
-                let mime = {
-                    let file_path = file_path.clone();
-
-                    tokio::task::spawn_blocking(move || infer_file_type(&file_path).ok())
-                        .await
-                        .ok()?
-                };
-
-                let metadata = match tokio::fs::metadata(&file_path).await {
-                    Ok(meta) => Some(meta),
-                    Err(e) => {
-                        trace!(?e, "Failed to get metadata for file");
-                        {
-                            failed.lock().push((
-                                file_path.clone(),
-                                "failed to get metadata for file".to_string(),
-                            ));
-                        }
-
-                        None
-                    }
-                }?;
-
-                Some(FileInfo {
-                    path: file_path,
-                    mime,
-                    metadata,
-                })
-            }
-        })
-        .collect::<FuturesUnordered<_>>()
-        .collect::<Vec<_>>()
-        .await
-        .into_iter()
-        .flatten()
-        .collect::<Vec<_>>();
-    trace!(?file_info, "Got file infos");
-
-    trace!("Converting to media files");
-    let media_files = file_info.into_iter().map(|file_info| {
-        let input_file = InputFile::file(file_info.path.clone());
-
-        // Handle the GIFs as animations because Telegram
-        // Optional todo: Also handle silent videos as animations
-        if file_info
-            .mime
-            .as_ref()
-            .is_some_and(|x| x.essence_str() == "image/gif")
-        {
-            return FileInfoWithMedia {
-                file_info,
-                media: InputMedia::Document(InputMediaDocument::new(input_file)),
-            };
-        }
-
-        let file_type = file_info
-            .mime
-            .as_ref()
-            .map(|f| f.type_().as_str().to_lowercase());
-        let media = match file_type.as_deref() {
-            Some("audio") => InputMedia::Audio(InputMediaAudio::new(input_file)),
-            Some("image") => InputMedia::Photo(InputMediaPhoto::new(input_file)),
-            Some("video") => InputMedia::Video(InputMediaVideo::new(input_file)),
-            _ => InputMedia::Document(InputMediaDocument::new(input_file)),
-        };
-
-        FileInfoWithMedia { file_info, media }
-    });
-    trace!(?media_files, "Converted to media files");
-
-    let chunkable_groups = {
-        #[derive(Debug, Eq, PartialEq, Hash)]
-        enum ChunkGroup {
-            Document,
-            Audio,
-            Other,
-        }
-
-        let mut groups: HashMap<ChunkGroup, Vec<FileInfoWithMedia>> = HashMap::new();
-        for f in media_files {
-            let group_name = match f.media {
-                InputMedia::Audio(_) => ChunkGroup::Audio,
-                InputMedia::Document(_) => ChunkGroup::Document,
-                _ => ChunkGroup::Other,
-            };
-
-            if let Some(group) = groups.get_mut(&group_name) {
-                group.push(f);
-            } else {
-                groups.insert(group_name, vec![f]);
-            }
-        }
-
-        groups.into_values().collect::<Vec<_>>()
-    };
-    trace!(?chunkable_groups, "Partitioned files");
-
-    let mut res = vec![];
-    for group in chunkable_groups {
-        let (chunks, failed_inner) = chunk(group, max_size);
-        failed.lock().extend(failed_inner);
-        res.extend(
-            chunks
-                .into_iter()
-                .map(|x| x.into_iter().map(|x| x.media).collect()),
-        );
-    }
-    trace!(?res, "Got file groupings");
-
-    let failed = failed.lock().iter().cloned().collect();
-
-    trace!(?failed, "Got final failed paths");
-
-    (res, failed)
 }
 
 #[tracing::instrument(skip_all, fields(download_dir))]
@@ -548,102 +271,4 @@ async fn download_files_from_urls(
     }
 
     (downloaded_paths, errors)
-}
-
-fn file_id_from_message(msg: &Message) -> Option<String> {
-    let px = |x: &PhotoSize| u64::from(x.width) * u64::from(x.height);
-
-    let msg_data = match &msg.kind {
-        MessageKind::Common(x) => x,
-        _ => return None,
-    };
-
-    match &msg_data.media_kind {
-        MediaKind::Video(x) => Some(x.video.file.id.clone()),
-        MediaKind::Animation(x) => Some(x.animation.file.id.clone()),
-        MediaKind::Audio(x) => Some(x.audio.file.id.clone()),
-        MediaKind::VideoNote(x) => Some(x.video_note.file.id.clone()),
-        MediaKind::Photo(x) if !x.photo.is_empty() => {
-            let mut photos = x.photo.clone();
-            photos.sort_unstable_by(|lt, gt| {
-                let pixels = px(gt).cmp(&px(lt));
-                if pixels != std::cmp::Ordering::Equal {
-                    return pixels;
-                }
-
-                gt.width.cmp(&lt.width)
-            });
-
-            photos.first().map(|x| x.file.id.clone())
-        }
-        MediaKind::Document(x) => {
-            let Some(mime_type) = &x.document.mime_type else {
-                return None;
-            };
-
-            if !matches!(mime_type.type_().as_str(), "image" | "video" | "audio") {
-                return None;
-            }
-
-            Some(x.document.file.id.clone())
-        }
-        _ => None,
-    }
-}
-
-fn file_urls_from_message(msg: &Message) -> Vec<Url> {
-    let entities = msg
-        .parse_entities()
-        .or_else(|| msg.parse_caption_entities())
-        .unwrap_or_default();
-
-    entities
-        .iter()
-        .filter_map(|x| match x.kind() {
-            MessageEntityKind::Url => Url::parse(x.text()).ok(),
-            MessageEntityKind::TextLink { url } => Some(url.clone()),
-            _ => None,
-        })
-        .collect()
-}
-
-#[tracing::instrument]
-async fn download_file_by_id(file_id: &str, download_dir: &Path) -> Result<PathBuf, String> {
-    trace!("Downloading file from telegram");
-
-    let f = TelegramBot::instance()
-        .get_file(file_id)
-        .await
-        .map_err(|e| format!("Error while getting file: {e:?}"))?;
-
-    trace!("Got file: {:?}", f);
-
-    let download_file_path = download_dir.join(format!(
-        "{rand_id}.{id}.bin",
-        rand_id = time_thread_id(),
-        id = f.meta.unique_id
-    ));
-
-    trace!(
-        "Downloading message file {:?} to: {:?}",
-        file_id,
-        &download_file_path
-    );
-
-    let mut file = File::create(&download_file_path)
-        .await
-        .map_err(|e| format!("Error while creating file: {e:?}"))?;
-
-    TelegramBot::pure_instance()
-        .download_file(&f.path, &mut file)
-        .await
-        .map_err(|e| format!("Error while downloading file: {e:?}"))?;
-
-    trace!("Downloaded file: {:?}", file);
-
-    file.sync_all()
-        .await
-        .map_err(|e| format!("Error while syncing file: {e:?}"))?;
-
-    Ok(download_file_path)
 }

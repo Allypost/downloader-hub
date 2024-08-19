@@ -1,11 +1,26 @@
-use teloxide::types::Message;
-use tracing::warn;
+use std::path::PathBuf;
 
-use crate::bot::helpers::status_message::StatusMessage;
+use app_actions::fixers::handlers::FixerInstance;
+use teloxide::{
+    prelude::*,
+    types::{Message, ReplyParameters},
+};
+use tracing::{debug, trace, warn};
+
+use crate::{
+    bot::{helpers::status_message::StatusMessage, TelegramBot},
+    queue::common::file::{files_to_input_media_groups, MAX_PAYLOAD_SIZE_BYTES},
+};
 
 #[derive(Clone, Debug)]
 pub enum TaskInfo {
-    DownloadRequest { message: Message },
+    DownloadRequest {
+        message: Message,
+    },
+    FixRequest {
+        message: Message,
+        fixers: Vec<FixerInstance>,
+    },
 }
 
 #[derive(Clone, Debug)]
@@ -17,6 +32,97 @@ pub struct Task {
     added: chrono::DateTime<chrono::Utc>,
     last_run: Option<chrono::DateTime<chrono::Utc>>,
 }
+impl Task {
+    pub fn download_request(message: Message, status_message: StatusMessage) -> Self {
+        Self::new(TaskInfo::DownloadRequest { message }, status_message)
+    }
+
+    pub fn fix_request(
+        message: Message,
+        fixers: Vec<FixerInstance>,
+        status_message: StatusMessage,
+    ) -> Self {
+        Self::new(TaskInfo::FixRequest { message, fixers }, status_message)
+    }
+}
+
+impl Task {
+    #[tracing::instrument(skip_all)]
+    pub async fn reply_with_files(&self, paths: Vec<PathBuf>) -> Result<(), String> {
+        trace!("Chunking files by size");
+        let (media_groups, failed_files) =
+            files_to_input_media_groups(paths, MAX_PAYLOAD_SIZE_BYTES / 10 * 8).await;
+        trace!(?media_groups, ?failed_files, "Chunked files by size");
+
+        debug!("Uploading files to Telegram");
+        for media_group in media_groups {
+            trace!(?media_group, "Uploading media group");
+
+            TelegramBot::instance()
+                .send_media_group(self.status_message().chat_id(), media_group)
+                .reply_parameters(
+                    ReplyParameters::new(self.status_message().msg_replying_to_id())
+                        .allow_sending_without_reply(),
+                )
+                .send()
+                .await
+                .map_err(|x| x.to_string())?;
+
+            trace!("Uploaded media group");
+        }
+        debug!("Uploaded files to Telegram");
+
+        if !failed_files.is_empty() {
+            debug!(?failed_files, "Failed to chunk some files to size");
+            trace!("Generating failed files message");
+            let failed_files_msg = {
+                let mut msg = "Failed to upload some files:\n\n".to_string();
+
+                msg += failed_files
+                    .into_iter()
+                    .map(|(file, reason)| {
+                        format!(
+                            " - File: {}\n   Reason: {}\n",
+                            file.file_name().unwrap_or_default().to_string_lossy(),
+                            reason
+                        )
+                    })
+                    .reduce(|a, b| a + "\n" + &b)
+                    .unwrap_or_default()
+                    .as_str();
+
+                msg
+            };
+            trace!(msg = ?failed_files_msg, "Failed files message generated");
+
+            trace!("Sending failed files message");
+            self.send_additional_status_message(failed_files_msg.trim())
+                .await;
+            trace!("Failed files message sent");
+        }
+
+        Ok(())
+    }
+}
+
+impl Task {
+    pub async fn update_status_message(&self, text: &str) {
+        try_and_warn(
+            self.status_message().update_message(text),
+            "Failed to update status message",
+        )
+        .await;
+    }
+
+    pub async fn send_additional_status_message(&self, text: &str) {
+        try_and_warn(
+            self.status_message().send_additional_message(text),
+            "Failed to send new status message",
+        )
+        .await;
+    }
+}
+
 impl Task {
     pub fn new(info: TaskInfo, status_message: StatusMessage) -> Self {
         let mut id = ulid::Ulid::new().to_string();
@@ -42,26 +148,6 @@ impl Task {
 
     pub fn status_message(&self) -> StatusMessage {
         self.status_message.clone()
-    }
-
-    pub async fn update_status_message(&self, text: &str) {
-        try_and_warn(
-            self.status_message().update_message(text),
-            "Failed to update status message",
-        )
-        .await;
-    }
-
-    pub async fn send_additional_status_message(&self, text: &str) {
-        try_and_warn(
-            self.status_message().send_additional_message(text),
-            "Failed to send new status message",
-        )
-        .await;
-    }
-
-    pub fn download_request(message: Message, status_message: StatusMessage) -> Self {
-        Self::new(TaskInfo::DownloadRequest { message }, status_message)
     }
 
     pub fn with_inc_retries(mut self) -> Self {

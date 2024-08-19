@@ -1,10 +1,12 @@
 mod download_request;
-
-use download_request::DownloadRequestHandler;
+mod fix_request;
 
 use crate::queue::task::Task;
 
-pub static HANDLERS: &[&dyn Handler] = &[&DownloadRequestHandler];
+pub static HANDLERS: &[&dyn Handler] = &[
+    &download_request::DownloadRequestHandler,
+    &fix_request::FixRequestHandler,
+];
 
 #[async_trait::async_trait]
 pub trait Handler: Sync + Send + std::fmt::Debug {
