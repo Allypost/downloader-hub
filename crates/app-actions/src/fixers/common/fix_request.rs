@@ -17,9 +17,12 @@ pub struct FixRequest {
 }
 impl FixRequest {
     #[must_use]
-    pub fn new(file_path: PathBuf) -> Self {
+    pub fn new<P>(file_path: P) -> Self
+    where
+        P: Into<PathBuf>,
+    {
         Self {
-            file_path,
+            file_path: file_path.into(),
             options: FixerOptions::new(),
         }
     }
@@ -98,6 +101,6 @@ impl From<&str> for FixRequest {
 
 impl From<String> for FixRequest {
     fn from(file_path: String) -> Self {
-        Self::new(file_path.into())
+        Self::new(file_path)
     }
 }

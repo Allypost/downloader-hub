@@ -5,6 +5,7 @@ use std::{
     sync::Arc,
 };
 
+use app_actions::fixers::{handlers::file_extensions::FileExtension, FixRequest, Fixer};
 use app_helpers::{
     file_type::{infer_file_type, mime},
     id::time_thread_id,
@@ -81,9 +82,17 @@ impl FileId {
 
         trace!("Finished syncing file");
 
-        debug!(path = ?download_file_path, "Downloaded file");
+        trace!("Setting proper file extension");
 
-        Ok(download_file_path)
+        let final_file_path = FileExtension
+            .run(&FixRequest::new(&download_file_path))
+            .await
+            .map(|x| x.file_path)
+            .unwrap_or(download_file_path);
+
+        debug!(path = ?final_file_path, "Downloaded file");
+
+        Ok(final_file_path)
     }
 }
 
