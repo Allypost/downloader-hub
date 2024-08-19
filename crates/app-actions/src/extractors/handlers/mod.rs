@@ -21,14 +21,14 @@ pub static AVAILABLE_EXTRACTORS: Lazy<Vec<ExtractorEntry>> = Lazy::new(available
 #[must_use]
 pub fn available_extractors() -> Vec<ExtractorEntry> {
     vec![
-        Arc::new(imgur::ImgurExtractor),
-        Arc::new(instagram::InstagramExtractor),
-        Arc::new(reddit::RedditExtractor),
-        Arc::new(tiktok::TiktokExtractor),
-        Arc::new(tumblr::TumblrExtractor),
-        Arc::new(twitter::TwitterExtractor),
-        Arc::new(music::MusicExtractor),
-        Arc::new(activity_pub::ActivityPubExtractor),
-        Arc::new(fallthough::FallthroughExtractor),
+        Arc::new(imgur::Imgur),
+        Arc::new(instagram::Instagram),
+        Arc::new(reddit::Reddit),
+        Arc::new(tiktok::Tiktok),
+        Arc::new(tumblr::Tumblr),
+        Arc::new(twitter::Twitter),
+        Arc::new(music::Music),
+        Arc::new(activity_pub::ActivityPub),
+        Arc::new(fallthough::Fallthrough),
     ]
 }

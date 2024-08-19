@@ -1,5 +1,6 @@
 use node_info::{get_node_info, NodeInfo};
 use once_cell::sync::Lazy;
+use serde::{Deserialize, Serialize};
 use tracing::{debug, trace, warn};
 
 use super::{ExtractInfoRequest, ExtractedInfo, Extractor};
@@ -9,15 +10,12 @@ pub mod mastodon;
 pub mod misskey;
 pub mod node_info;
 
-#[derive(Debug, Default, Clone)]
-pub struct ActivityPubExtractor;
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct ActivityPub;
 
 #[async_trait::async_trait]
-impl Extractor for ActivityPubExtractor {
-    fn name(&self) -> &'static str {
-        "activity-pub"
-    }
-
+#[typetag::serde]
+impl Extractor for ActivityPub {
     fn description(&self) -> &'static str {
         "Gets image and video URLS from many ActivityPub instances. Also screenshots the post."
     }

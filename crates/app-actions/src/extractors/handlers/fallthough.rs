@@ -1,13 +1,13 @@
+use serde::{Deserialize, Serialize};
+
 use super::{ExtractInfoRequest, ExtractedInfo, Extractor};
 
-pub struct FallthroughExtractor;
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct Fallthrough;
 
 #[async_trait::async_trait]
-impl Extractor for FallthroughExtractor {
-    fn name(&self) -> &'static str {
-        "fallthrough"
-    }
-
+#[typetag::serde]
+impl Extractor for Fallthrough {
     fn description(&self) -> &'static str {
         "Fallthrough extractor. Does nothing, just forwards the URL."
     }

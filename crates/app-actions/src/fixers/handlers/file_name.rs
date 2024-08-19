@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tokio::fs;
 use tracing::{debug, trace};
@@ -9,14 +10,12 @@ use crate::fixers::{
     Fixer, FixerReturn, IntoFixerReturn,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct FileName;
-#[async_trait::async_trait]
-impl Fixer for FileName {
-    fn name(&self) -> &'static str {
-        "file-name"
-    }
 
+#[async_trait::async_trait]
+#[typetag::serde]
+impl Fixer for FileName {
     fn description(&self) -> &'static str {
         "Fix file name to contain only approved characters."
     }

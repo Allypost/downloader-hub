@@ -13,7 +13,7 @@ use zip::ZipArchive;
 use super::Handler;
 use crate::{
     common::request::Client,
-    downloaders::{handlers::generic::GenericDownloader, DownloadRequest, Downloader},
+    downloaders::{handlers::generic::Generic, DownloadRequest, Downloader},
 };
 
 const API_URL: &str = "https://yams.tf/api";
@@ -73,7 +73,7 @@ impl Handler for YamsProvider {
             "Download URL found. Downloading song zip."
         );
 
-        let song_zip_path = GenericDownloader
+        let song_zip_path = Generic
             .download(&DownloadRequest::from_url(&download_url, download_dir))
             .await
             .map_err(|e| anyhow::anyhow!(e))?;

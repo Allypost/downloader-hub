@@ -4,6 +4,7 @@ pub mod yams;
 use std::path::{Path, PathBuf};
 
 use once_cell::sync::Lazy;
+use serde::{Deserialize, Serialize};
 use tracing::warn;
 use url::Url;
 
@@ -17,15 +18,12 @@ static HANDLERS: Lazy<Vec<DownloadHandler>> = Lazy::new(|| {
     ]
 });
 
-#[derive(Debug, Default)]
-pub struct MusicDownloader;
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub struct Music;
 
 #[async_trait::async_trait]
-impl Downloader for MusicDownloader {
-    fn name(&self) -> &'static str {
-        "music"
-    }
-
+#[typetag::serde]
+impl Downloader for Music {
     fn description(&self) -> &'static str {
         "Download songs from Spotify, Deezer, Tidal, and various other music providers. Depends on \
          external services so may be randomly unavailable."
@@ -60,7 +58,7 @@ impl Downloader for MusicDownloader {
     }
 }
 
-impl MusicDownloader {
+impl Music {
     pub fn supports(song_url: &Url) -> bool {
         HANDLERS.iter().any(|handler| handler.supports(song_url))
     }

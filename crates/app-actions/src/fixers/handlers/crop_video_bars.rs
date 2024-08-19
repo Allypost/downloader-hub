@@ -7,6 +7,7 @@ use std::{
 use app_config::Config;
 use app_helpers::{ffprobe, file_time::transfer_file_times, trash::move_to_trash};
 use futures::{stream::FuturesUnordered, StreamExt};
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tokio::process::Command;
 use tracing::{debug, trace, warn};
@@ -16,14 +17,12 @@ use crate::fixers::{
     Fixer, FixerReturn, IntoFixerReturn,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct CropVideoBars;
-#[async_trait::async_trait]
-impl Fixer for CropVideoBars {
-    fn name(&self) -> &'static str {
-        "crop-video-bars"
-    }
 
+#[async_trait::async_trait]
+#[typetag::serde]
+impl Fixer for CropVideoBars {
     async fn can_run_for(&self, request: &FixRequest) -> bool {
         get_video_stream(&request.file_path)
             .await

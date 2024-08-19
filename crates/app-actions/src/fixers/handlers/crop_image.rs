@@ -1,19 +1,17 @@
 use app_config::Config;
 use app_helpers::file_type;
+use serde::{Deserialize, Serialize};
 use tokio::process::Command;
 use tracing::warn;
 
 use crate::fixers::{FixRequest, FixResult, Fixer, FixerError, FixerReturn};
 
-#[derive(Debug)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct CropImage;
 
 #[async_trait::async_trait]
+#[typetag::serde]
 impl Fixer for CropImage {
-    fn name(&self) -> &'static str {
-        "crop-image"
-    }
-
     fn can_run(&self) -> bool {
         Config::global()
             .dependency_paths

@@ -17,7 +17,6 @@ pub type DownloaderOptions = HashMap<String, serde_json::Value>;
 pub struct DownloadRequest {
     pub url: UrlWithMeta,
     pub download_dir: PathBuf,
-    #[serde(skip)]
     pub preferred_downloader: Option<DownloaderEntry>,
     pub downloader_options: DownloaderOptions,
 }

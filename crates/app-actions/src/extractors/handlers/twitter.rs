@@ -4,15 +4,14 @@ use app_config::Config;
 use http::{header, HeaderMap};
 use once_cell::sync::Lazy;
 use regex::Regex;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tracing::{debug, trace};
 use url::{form_urlencoded, Url};
 
 use super::{ExtractInfoRequest, ExtractedInfo, Extractor};
 use crate::{
-    common::request::Client, downloaders::handlers::generic::GenericDownloader,
-    extractors::ExtractedUrlInfo,
+    common::request::Client, downloaders::handlers::generic::Generic, extractors::ExtractedUrlInfo,
 };
 
 pub static URL_MATCH: Lazy<Regex> = Lazy::new(|| {
@@ -36,15 +35,12 @@ static TWEET_INFO_ENDPOINT: &str =
 
 static GUEST_TOKEN_ENDPOINT: &str = "https://api.x.com/1.1/guest/activate.json";
 
-#[derive(Debug, Default)]
-pub struct TwitterExtractor;
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct Twitter;
 
 #[async_trait::async_trait]
-impl Extractor for TwitterExtractor {
-    fn name(&self) -> &'static str {
-        "twitter"
-    }
-
+#[typetag::serde]
+impl Extractor for Twitter {
     fn description(&self) -> &'static str {
         "Downloads images and videos from Twitter posts"
     }
@@ -92,7 +88,7 @@ impl Extractor for TwitterExtractor {
     }
 }
 
-impl TwitterExtractor {
+impl Twitter {
     #[must_use]
     pub fn screenshot_tweet_url(&self, url: &str) -> String {
         let endpoint = &Config::global().endpoint.twitter_screenshot_base_url;
@@ -265,7 +261,7 @@ impl std::fmt::Display for TweetMedia {
 impl From<TweetMedia> for ExtractedUrlInfo {
     fn from(val: TweetMedia) -> Self {
         Self::new(val.as_url()).with_preferred_downloader(match val {
-            TweetMedia::Photo { .. } => Some(GenericDownloader),
+            TweetMedia::Photo { .. } => Some(Generic),
             TweetMedia::Video { .. } => None,
         })
     }

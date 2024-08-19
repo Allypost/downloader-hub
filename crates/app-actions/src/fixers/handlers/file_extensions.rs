@@ -1,5 +1,6 @@
 use std::{ffi::OsStr, path::PathBuf};
 
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tokio::fs;
 use tracing::{debug, trace};
@@ -9,14 +10,12 @@ use crate::fixers::{
     Fixer, FixerReturn, IntoFixerReturn,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct FileExtension;
-#[async_trait::async_trait]
-impl Fixer for FileExtension {
-    fn name(&self) -> &'static str {
-        "file-extension"
-    }
 
+#[async_trait::async_trait]
+#[typetag::serde]
+impl Fixer for FileExtension {
     fn description(&self) -> &'static str {
         "Fix file extensions to match the file type."
     }

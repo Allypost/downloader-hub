@@ -2,22 +2,19 @@ use std::result::Result;
 
 use once_cell::sync::Lazy;
 use regex::Regex;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tracing::{debug, trace};
 use url::Url;
 
 use super::{ExtractInfoRequest, Extractor};
 use crate::{common::request::Client, extractors::ExtractedInfo};
 
-#[derive(Debug, Default)]
-pub struct InstagramExtractor;
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct Instagram;
 
 #[async_trait::async_trait]
-impl Extractor for InstagramExtractor {
-    fn name(&self) -> &'static str {
-        "instagram"
-    }
-
+#[typetag::serde]
+impl Extractor for Instagram {
     fn description(&self) -> &'static str {
         "Get images and videos from Instagram posts"
     }
@@ -38,7 +35,7 @@ static URL_MATCH: Lazy<Regex> = Lazy::new(|| {
         .expect("Invalid regex")
 });
 
-impl InstagramExtractor {
+impl Instagram {
     pub fn is_post_url(url: &Url) -> bool {
         URL_MATCH.is_match(url.as_str())
     }

@@ -1,20 +1,18 @@
 use std::{ffi::OsStr, path::PathBuf};
 
 use app_helpers::id::time_id;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tokio::fs;
 
 use super::{Action, ActionError, ActionRequest, ActionResult};
 
-#[derive(Debug)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct RenameToId;
 
 #[async_trait::async_trait]
+#[typetag::serde]
 impl Action for RenameToId {
-    fn name(&self) -> &'static str {
-        "rename-to-id"
-    }
-
     fn description(&self) -> &'static str {
         "Rename file to match standard file naming convention \
          ($TIME_ID.$ORIGINAL_CROPPED_NAME.$EXT)"

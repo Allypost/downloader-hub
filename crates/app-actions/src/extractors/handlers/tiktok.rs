@@ -1,20 +1,18 @@
 use std::collections::HashMap;
 
+use serde::{Deserialize, Serialize};
 use tracing::{debug, trace};
 use url::Url;
 
 use super::{ExtractInfoRequest, ExtractedInfo, Extractor};
 use crate::common::{request::USER_AGENT, url::UrlWithMeta};
 
-#[derive(Debug, Default)]
-pub struct TiktokExtractor;
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct Tiktok;
 
 #[async_trait::async_trait]
-impl Extractor for TiktokExtractor {
-    fn name(&self) -> &'static str {
-        "tiktok"
-    }
-
+#[typetag::serde]
+impl Extractor for Tiktok {
     fn description(&self) -> &'static str {
         "Get videos from TikTok posts"
     }
@@ -32,7 +30,7 @@ impl Extractor for TiktokExtractor {
     }
 }
 
-impl TiktokExtractor {
+impl Tiktok {
     #[must_use]
     pub fn is_post_url(url: &Url) -> bool {
         url.host_str().is_some_and(|x| x == "www.tiktok.com") && url.path().starts_with("/@")

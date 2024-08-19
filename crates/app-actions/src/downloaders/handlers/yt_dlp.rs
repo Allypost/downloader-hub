@@ -9,21 +9,19 @@ use std::{
 use app_config::Config;
 use app_helpers::{id::time_id, temp_dir::TempDir, temp_file::TempFile};
 use http::header;
+use serde::{Deserialize, Serialize};
 use tokio::process::Command;
 use tracing::{debug, trace};
 
 use super::{generic, DownloadRequest, DownloadResult, Downloader, DownloaderReturn};
 use crate::common::request::USER_AGENT;
 
-#[derive(Debug, Default)]
-pub struct YtDlpDownloader;
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub struct YtDlp;
 
 #[async_trait::async_trait]
-impl Downloader for YtDlpDownloader {
-    fn name(&self) -> &'static str {
-        "yt-dlp"
-    }
-
+#[typetag::serde]
+impl Downloader for YtDlp {
     fn description(&self) -> &'static str {
         "Downloads videos and images using yt-dlp. Supports a wide range of sites."
     }
@@ -37,7 +35,7 @@ impl Downloader for YtDlpDownloader {
     }
 }
 
-impl YtDlpDownloader {
+impl YtDlp {
     #[allow(clippy::too_many_lines)]
     pub async fn download_one(&self, request: &DownloadRequest) -> Result<DownloadResult, String> {
         let yt_dlp = Config::global().dependency_paths.yt_dlp_path();
@@ -164,7 +162,7 @@ impl YtDlpDownloader {
                 stderr,
                 status: _,
             }) if is_image_error(stderr.clone()) => {
-                return generic::GenericDownloader.download(request).await
+                return generic::Generic.download(request).await
             }
             _ => {
                 return Err(format!("yt-dlp failed downloading meme: {cmd_output:?}"));

@@ -11,6 +11,7 @@ use app_helpers::{
 };
 use futures::future::BoxFuture;
 use image::ColorType;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tokio::{fs, process::Command};
 use tracing::{debug, error, trace};
@@ -20,14 +21,12 @@ use crate::fixers::{
     Fixer, FixerReturn, IntoFixerReturn,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct MediaFormats;
-#[async_trait::async_trait]
-impl Fixer for MediaFormats {
-    fn name(&self) -> &'static str {
-        "media-formats"
-    }
 
+#[async_trait::async_trait]
+#[typetag::serde]
+impl Fixer for MediaFormats {
     fn description(&self) -> &'static str {
         "Re-encode files to match more standard formats (eg. webm -> mp4)."
     }

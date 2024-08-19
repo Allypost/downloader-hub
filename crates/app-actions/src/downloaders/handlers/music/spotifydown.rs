@@ -13,7 +13,7 @@ use url::Url;
 use super::Handler;
 use crate::{
     common::request::Client,
-    downloaders::{handlers::generic::GenericDownloader, DownloadRequest, Downloader},
+    downloaders::{handlers::generic::Generic, DownloadRequest, Downloader},
 };
 
 const URL_BASE: &str = "https://spotifydown.com";
@@ -48,7 +48,7 @@ impl Handler for SpotifydownProvider {
 
         debug!(?download_url, "Download URL found. Downloading song.");
 
-        GenericDownloader
+        Generic
             .download(&DownloadRequest::from_url(&download_url, download_dir))
             .await
             .map(|x| x.path)

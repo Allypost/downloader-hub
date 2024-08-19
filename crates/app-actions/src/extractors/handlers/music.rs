@@ -1,15 +1,14 @@
-use super::{ExtractInfoRequest, ExtractedInfo, Extractor};
-use crate::downloaders::handlers::music::MusicDownloader;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Default)]
-pub struct MusicExtractor;
+use super::{ExtractInfoRequest, ExtractedInfo, Extractor};
+use crate::downloaders::handlers::music::Music as MusicDownloader;
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct Music;
 
 #[async_trait::async_trait]
-impl Extractor for MusicExtractor {
-    fn name(&self) -> &'static str {
-        "music"
-    }
-
+#[typetag::serde]
+impl Extractor for Music {
     fn description(&self) -> &'static str {
         "Download songs from Spotify, Deezer, Tidal, and various other music providers. Depends on \
          external services so may be randomly unavailable."

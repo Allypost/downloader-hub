@@ -81,7 +81,6 @@ pub type PreferredDownloader = Arc<dyn Downloader>;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExtractedUrlInfo {
     pub url: UrlWithMeta,
-    #[serde(skip)]
     pub preferred_downloader: Option<PreferredDownloader>,
     pub downloader_options: DownloaderOptions,
 }

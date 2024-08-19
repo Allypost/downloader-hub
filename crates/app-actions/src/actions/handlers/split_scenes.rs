@@ -2,19 +2,18 @@ use std::path::{Path, PathBuf};
 
 use app_config::Config;
 use app_helpers::temp_dir::TempDir;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tokio::{fs, process::Command};
 
 use super::{Action, ActionError, ActionRequest, ActionResult};
 
-#[derive(Debug)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct SplitScenes;
-#[async_trait::async_trait]
-impl Action for SplitScenes {
-    fn name(&self) -> &'static str {
-        "split-scenes"
-    }
 
+#[async_trait::async_trait]
+#[typetag::serde]
+impl Action for SplitScenes {
     fn description(&self) -> &'static str {
         "Detect scenes in a video and split them into separate files."
     }

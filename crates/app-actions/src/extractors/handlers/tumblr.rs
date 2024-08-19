@@ -1,18 +1,16 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
+use serde::{Deserialize, Serialize};
 use url::Url;
 
-use super::{twitter::TwitterExtractor, ExtractInfoRequest, ExtractedInfo, Extractor};
+use super::{twitter::Twitter, ExtractInfoRequest, ExtractedInfo, Extractor};
 
-#[derive(Debug, Default)]
-pub struct TumblrExtractor;
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct Tumblr;
 
 #[async_trait::async_trait]
-impl Extractor for TumblrExtractor {
-    fn name(&self) -> &'static str {
-        "tumblr"
-    }
-
+#[typetag::serde]
+impl Extractor for Tumblr {
     fn description(&self) -> &'static str {
         "Downloads images and videos from Tumblr and screenshots the post itself."
     }
@@ -22,7 +20,7 @@ impl Extractor for TumblrExtractor {
     }
 
     async fn extract_info(&self, request: &ExtractInfoRequest) -> Result<ExtractedInfo, String> {
-        TwitterExtractor.extract_info(request).await
+        Twitter.extract_info(request).await
     }
 }
 
@@ -31,7 +29,7 @@ static DOMAIN_MATCH: Lazy<Regex> = Lazy::new(|| {
         .expect("Invalid regex")
 });
 
-impl TumblrExtractor {
+impl Tumblr {
     pub fn is_post_url(url: &Url) -> bool {
         let Some(domain) = url.domain() else {
             return false;

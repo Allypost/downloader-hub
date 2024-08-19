@@ -11,8 +11,11 @@ pub use common::{
 pub use handlers::AVAILABLE_ACTIONS;
 
 #[async_trait::async_trait]
+#[typetag::serde(tag = "$action")]
 pub trait Action: Debug + Send + Sync {
-    fn name(&self) -> &'static str;
+    fn name(&self) -> &'static str {
+        self.typetag_name()
+    }
 
     fn description(&self) -> &'static str;
 

@@ -3,6 +3,7 @@ use std::{ffi::OsString, path::PathBuf, string::ToString};
 use app_helpers::id::time_id;
 use http::header;
 use mime2ext::mime2ext;
+use serde::{Deserialize, Serialize};
 use tokio::{fs::File, io::AsyncWriteExt};
 use tracing::{debug, info, trace};
 use unicode_segmentation::UnicodeSegmentation;
@@ -13,15 +14,12 @@ use crate::{common::request::Client, downloaders::helpers::headers::content_disp
 
 pub const MAX_FILENAME_LENGTH: usize = 120;
 
-#[derive(Debug, Default)]
-pub struct GenericDownloader;
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub struct Generic;
 
 #[async_trait::async_trait]
-impl Downloader for GenericDownloader {
-    fn name(&self) -> &'static str {
-        "generic"
-    }
-
+#[typetag::serde]
+impl Downloader for Generic {
     fn description(&self) -> &'static str {
         "Just tries to download exactly what you give it. No fancy tricks."
     }
@@ -35,7 +33,7 @@ impl Downloader for GenericDownloader {
     }
 }
 
-impl GenericDownloader {
+impl Generic {
     pub async fn download_one(
         &self,
         request_info: &DownloadRequest,

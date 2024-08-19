@@ -1,20 +1,17 @@
 use std::string::ToString;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tracing::trace;
 use url::Url;
 
 use super::{ExtractInfoRequest, ExtractedInfo, Extractor};
 
-#[derive(Debug, Default)]
-pub struct ImgurExtractor;
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct Imgur;
 
 #[async_trait::async_trait]
-impl Extractor for ImgurExtractor {
-    fn name(&self) -> &'static str {
-        "imgur"
-    }
-
+#[typetag::serde]
+impl Extractor for Imgur {
     fn description(&self) -> &'static str {
         "Gets images and other media from imgur posts"
     }
@@ -42,7 +39,7 @@ pub fn is_imgur_url(url: &str) -> bool {
     url.starts_with("https://imgur.com/") || url.starts_with("http://imgur.com/")
 }
 
-impl ImgurExtractor {
+impl Imgur {
     #[must_use]
     pub fn is_media_url(url: &Url) -> bool {
         url.host_str().is_some_and(|x| x == "i.imgur.com")

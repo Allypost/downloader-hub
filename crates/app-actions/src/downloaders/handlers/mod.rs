@@ -19,9 +19,9 @@ pub static AVAILABLE_DOWNLOADERS: Lazy<Vec<DownloaderEntry>> = Lazy::new(availab
 
 fn all_downloaders() -> Vec<DownloaderEntry> {
     vec![
-        Arc::new(yt_dlp::YtDlpDownloader),
-        Arc::new(generic::GenericDownloader),
-        Arc::new(music::MusicDownloader),
+        Arc::new(yt_dlp::YtDlp),
+        Arc::new(generic::Generic),
+        Arc::new(music::Music),
     ]
 }
 

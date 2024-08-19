@@ -1,20 +1,19 @@
+use serde::{Deserialize, Serialize};
+
 use super::{ExtractInfoRequest, ExtractedInfo, Extractor};
-use crate::downloaders::handlers::yt_dlp::YtDlpDownloader;
+use crate::downloaders::handlers::yt_dlp::YtDlp;
 
 #[must_use]
 pub fn is_reddit_image_url(url: &str) -> bool {
     url.starts_with("https://i.redd.it/")
 }
 
-#[derive(Debug, Default)]
-pub struct RedditExtractor;
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct Reddit;
 
 #[async_trait::async_trait]
-impl Extractor for RedditExtractor {
-    fn name(&self) -> &'static str {
-        "reddit"
-    }
-
+#[typetag::serde]
+impl Extractor for Reddit {
     fn description(&self) -> &'static str {
         "Gets reddit media. Only works on media links (eg. https://i.redd.it/...)"
     }
@@ -25,11 +24,11 @@ impl Extractor for RedditExtractor {
 
     async fn extract_info(&self, request: &ExtractInfoRequest) -> Result<ExtractedInfo, String> {
         Ok(ExtractedInfo::from_url(request, request.url.as_str())
-            .with_preferred_downloader(Some(YtDlpDownloader)))
+            .with_preferred_downloader(Some(YtDlp)))
     }
 }
 
-impl RedditExtractor {
+impl Reddit {
     #[must_use]
     pub fn is_media_url(url: &str) -> bool {
         url.starts_with("https://i.redd.it/")

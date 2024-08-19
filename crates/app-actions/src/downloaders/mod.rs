@@ -5,7 +5,6 @@ pub use common::{
     download_result::DownloadResult,
 };
 pub use handlers::DownloaderEntry;
-use serde::Serialize;
 
 mod common;
 pub mod handlers;
@@ -15,8 +14,11 @@ pub use handlers::AVAILABLE_DOWNLOADERS;
 use tracing::{debug, info};
 
 #[async_trait::async_trait]
+#[typetag::serde(tag = "$downloader")]
 pub trait Downloader: Debug + Send + Sync {
-    fn name(&self) -> &'static str;
+    fn name(&self) -> &'static str {
+        self.typetag_name()
+    }
 
     fn description(&self) -> &'static str;
 
@@ -27,19 +29,6 @@ pub trait Downloader: Debug + Send + Sync {
     async fn can_download(&self, request: &DownloadRequest) -> bool;
 
     async fn download(&self, req: &DownloadRequest) -> DownloaderReturn;
-}
-impl std::fmt::Display for dyn Downloader {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Downloader::{}", self.name())
-    }
-}
-impl Serialize for dyn Downloader {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::ser::Serializer,
-    {
-        self.to_string().serialize(serializer)
-    }
 }
 
 pub type DownloaderReturn = Result<DownloadResult, DownloaderError>;
