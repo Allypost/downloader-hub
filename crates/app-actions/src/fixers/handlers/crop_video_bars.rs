@@ -17,11 +17,19 @@ use crate::fixers::{
 };
 
 #[derive(Debug)]
-pub struct CropBars;
+pub struct CropVideoBars;
 #[async_trait::async_trait]
-impl Fixer for CropBars {
+impl Fixer for CropVideoBars {
     fn name(&self) -> &'static str {
-        "crop-bars"
+        "crop-video-bars"
+    }
+
+    async fn can_run_for(&self, request: &FixRequest) -> bool {
+        get_video_stream(&request.file_path)
+            .await
+            .ok()
+            .flatten()
+            .is_some()
     }
 
     fn description(&self) -> &'static str {
@@ -48,14 +56,7 @@ async fn do_auto_crop_video(file_path: &Path) -> Result<PathBuf, CropError> {
         )
     })?;
 
-    let media_info = ffprobe::ffprobe_async(file_path)
-        .await
-        .map_err(CropError::FfProbeError)?;
-
-    let video_stream = media_info
-        .streams
-        .iter()
-        .find(|s| s.codec_type.as_ref().is_some_and(|x| x == "video"));
+    let video_stream = get_video_stream(file_path).await?;
 
     let (w, h) = {
         let video_stream = if let Some(s) = video_stream {
@@ -149,6 +150,19 @@ async fn do_auto_crop_video(file_path: &Path) -> Result<PathBuf, CropError> {
     }
 
     Ok(new_filename)
+}
+
+async fn get_video_stream(file_path: &Path) -> Result<Option<ffprobe::Stream>, CropError> {
+    let media_info = ffprobe::ffprobe_async(file_path)
+        .await
+        .map_err(CropError::FfProbeError)?;
+
+    let video_stream = media_info
+        .streams
+        .iter()
+        .find(|s| s.codec_type.as_ref().is_some_and(|x| x == "video"));
+
+    Ok(video_stream.cloned())
 }
 
 #[derive(Debug, Clone)]
@@ -248,6 +262,7 @@ async fn get_crop_filter(
             BorderColor::Black => {}
         };
 
+        // skip=0
         filters.push("cropdetect=mode=black:limit=24:round=2:reset=0");
 
         filters.join(",")

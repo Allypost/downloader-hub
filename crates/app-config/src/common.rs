@@ -45,6 +45,13 @@ pub struct ProgramPathConfig {
     #[arg(long, default_value = None, env = "DOWNLOADER_HUB_SCENEDETECT", value_hint = ValueHint::FilePath, value_parser = value_parser_parse_valid_file())]
     #[validate(custom(function = "validate_is_file"))]
     scenedetect_path: Option<PathBuf>,
+
+    /// Path to the imagemagick executable.
+    ///
+    /// If not provided, imagemagick will be searched for in $PATH
+    #[arg(long, default_value = None, env = "DOWNLOADER_HUB_IMAGEMAGICK", value_hint = ValueHint::FilePath, value_parser = value_parser_parse_valid_file())]
+    #[validate(custom(function = "validate_is_file"))]
+    imagemagick_path: Option<PathBuf>,
 }
 impl ProgramPathConfig {
     #[must_use]
@@ -77,6 +84,11 @@ impl ProgramPathConfig {
     }
 
     #[must_use]
+    pub fn imagemagick_path(&self) -> Option<PathBuf> {
+        self.imagemagick_path.clone()
+    }
+
+    #[must_use]
     pub fn resolve_paths(mut self) -> Self {
         self.with_resolved_paths();
         self
@@ -100,6 +112,11 @@ impl ProgramPathConfig {
             .scenedetect_path
             .clone()
             .or_else(|| which::which("scenedetect").ok());
+
+        self.imagemagick_path = self
+            .imagemagick_path
+            .clone()
+            .or_else(|| which::which("magick").ok());
 
         self
     }

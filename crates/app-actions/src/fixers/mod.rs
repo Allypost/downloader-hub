@@ -3,7 +3,7 @@ use std::convert::Into;
 use app_helpers::file_time::transferable_file_times;
 pub use common::{FixRequest, FixResult, FixerError, FixerReturn};
 use handlers::FixerInstance;
-pub use handlers::AVAILABLE_FIXERS;
+pub use handlers::{AVAILABLE_FIXERS, ENABLED_FIXERS};
 use tracing::{debug, trace, warn};
 
 mod common;
@@ -19,8 +19,12 @@ pub trait Fixer: std::fmt::Debug + Send + Sync {
         true
     }
 
+    fn enabled_by_default(&self) -> bool {
+        true
+    }
+
     #[allow(unused_variables)]
-    fn can_run_for(&self, request: &FixRequest) -> bool {
+    async fn can_run_for(&self, request: &FixRequest) -> bool {
         true
     }
 
@@ -41,7 +45,7 @@ where
 }
 
 pub async fn fix_file(request: FixRequest) -> FixerReturn {
-    fix_file_with(AVAILABLE_FIXERS.clone(), request).await
+    fix_file_with(ENABLED_FIXERS.clone(), request).await
 }
 
 #[tracing::instrument(skip(fixers))]
@@ -55,7 +59,7 @@ pub async fn fix_file_with(fixers: Vec<FixerInstance>, request: FixRequest) -> F
     for fixer in fixers {
         trace!(?fixer, "Trying fixer");
 
-        if !fixer.can_run_for(&req) {
+        if !fixer.can_run_for(&req).await {
             continue;
         }
 

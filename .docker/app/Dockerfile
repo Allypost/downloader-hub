@@ -121,6 +121,7 @@ RUN cd "$(mktemp --directory)" && \
   && mv ffmpeg ffprobe qt-faststart /usr/local/bin/ \
   && cd .. \
   && rm -rf "$(pwd)"
+COPY --from=index.docker.io/dpokidov/imagemagick:latest /usr/local/bin/magick /usr/local/bin/magick
 # Install latest phantomjs (yt-dlp uses as a helper)
 ENV OPENSSL_CONF=/dev/null
 RUN mkdir -p /usr/share \

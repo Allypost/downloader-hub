@@ -265,13 +265,15 @@ async fn handle_command(msg: Message, command: BotCommand) -> ResponseResult<()>
                 .iter()
                 .map(|x| {
                     format!(
-                        "<blockquote><u>{}</u>\n{}</blockquote>",
-                        x.name(),
-                        x.description()
+                        "<blockquote>{star}<u>{name}</u>\n{desc}</blockquote>",
+                        name = x.name(),
+                        desc = x.description(),
+                        star = if x.enabled_by_default() { "" } else { "*" }
                     )
                 })
                 .collect::<Vec<_>>()
-                .join("\n");
+                .join("\n")
+                + "\n\n* Not enabled by default";
 
             TelegramBot::instance()
                 .send_message(
