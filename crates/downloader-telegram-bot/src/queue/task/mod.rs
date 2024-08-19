@@ -5,7 +5,7 @@ use teloxide::{
     prelude::*,
     types::{Message, ReplyParameters},
 };
-use tracing::{debug, trace, warn};
+use tracing::{debug, field, trace, warn, Span};
 
 use crate::{
     bot::{helpers::status_message::StatusMessage, TelegramBot},
@@ -102,6 +102,18 @@ impl Task {
         }
 
         Ok(())
+    }
+
+    #[allow(clippy::unused_self)]
+    pub fn add_span_metadata(&self, msg: &Message) {
+        if let Some(user) = msg.from.as_ref() {
+            Span::current().record("uid", field::display(user.id.0));
+            Span::current().record("name", field::debug(user.full_name()));
+
+            if let Some(username) = user.username.as_deref() {
+                Span::current().record("username", field::debug(username));
+            }
+        }
     }
 }
 

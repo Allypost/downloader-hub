@@ -5,7 +5,7 @@ use app_config::Config;
 use app_helpers::temp_dir::TempDir;
 use futures::{stream::FuturesUnordered, StreamExt};
 use teloxide::types::Message;
-use tracing::{debug, field, info, trace, Span};
+use tracing::{debug, info, trace};
 use url::Url;
 
 use super::{Handler, HandlerError, HandlerReturn};
@@ -38,14 +38,7 @@ impl Handler for DownloadRequestHandler {
 
         trace!(?msg, "Got message from task");
 
-        if let Some(user) = msg.from.as_ref() {
-            Span::current().record("uid", field::display(user.id.0));
-            Span::current().record("name", field::debug(user.full_name()));
-
-            if let Some(username) = user.username.as_deref() {
-                Span::current().record("username", field::debug(username));
-            }
-        }
+        task.add_span_metadata(msg);
 
         info!(task_id = ?task.id(), "Handling download request");
 

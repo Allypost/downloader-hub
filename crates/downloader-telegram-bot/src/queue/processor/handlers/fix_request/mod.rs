@@ -1,6 +1,6 @@
 use app_actions::fixers::{fix_file_with, FixRequest};
 use app_helpers::temp_dir::TempDir;
-use tracing::{field, info, trace, Span};
+use tracing::{info, trace};
 
 use super::{Handler, HandlerError, HandlerReturn};
 use crate::queue::{
@@ -37,14 +37,7 @@ impl Handler for FixRequestHandler {
 
         trace!(?msg, "Got message from task");
 
-        if let Some(user) = msg.from.as_ref() {
-            Span::current().record("uid", field::display(user.id.0));
-            Span::current().record("name", field::debug(user.full_name()));
-
-            if let Some(username) = user.username.as_deref() {
-                Span::current().record("username", field::debug(username));
-            }
-        }
+        task.add_span_metadata(msg);
 
         info!(task_id = ?task.id(), "Handling fix request");
 
