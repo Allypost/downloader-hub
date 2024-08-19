@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use app_actions::fixers::handlers::FixerInstance;
+use app_actions::{actions::handlers::ActionEntry, fixers::handlers::FixerInstance};
 use teloxide::{
     prelude::*,
     types::{Message, ReplyParameters},
@@ -13,6 +13,7 @@ use crate::{
 };
 
 #[derive(Clone, Debug)]
+#[allow(clippy::enum_variant_names)]
 pub enum TaskInfo {
     DownloadRequest {
         message: Message,
@@ -20,6 +21,10 @@ pub enum TaskInfo {
     FixRequest {
         message: Message,
         fixers: Vec<FixerInstance>,
+    },
+    ActionRequest {
+        message: Message,
+        action: ActionEntry,
     },
 }
 
@@ -43,6 +48,14 @@ impl Task {
         status_message: StatusMessage,
     ) -> Self {
         Self::new(TaskInfo::FixRequest { message, fixers }, status_message)
+    }
+
+    pub fn action_request(
+        message: Message,
+        action: ActionEntry,
+        status_message: StatusMessage,
+    ) -> Self {
+        Self::new(TaskInfo::ActionRequest { message, action }, status_message)
     }
 }
 

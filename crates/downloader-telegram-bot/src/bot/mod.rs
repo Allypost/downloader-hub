@@ -3,7 +3,7 @@ pub mod helpers;
 use std::{collections::HashMap, string::ToString};
 
 use app_actions::{
-    actions::AVAILABLE_ACTIONS,
+    actions::{handlers::ActionEntry, AVAILABLE_ACTIONS},
     downloaders::AVAILABLE_DOWNLOADERS,
     extractors::AVAILABLE_EXTRACTORS,
     fixers::{handlers::FixerInstance, AVAILABLE_FIXERS},
@@ -76,11 +76,29 @@ enum BotCommand {
         parse_with = parse_fixers,
     )]
     Fix(Vec<FixerInstance>),
-    // #[command(
-    //     description = "Split the video into scenes (best effort). Must be a reply to a video \
-    //                    message or text of a video message."
-    // )]
-    // SplitScenes,
+    #[command(
+        description = "Run the specified action on the message.",
+        parse_with = parse_action,
+    )]
+    Act(ActionEntry),
+}
+
+struct CmdActParams(ActionEntry);
+#[allow(clippy::unnecessary_wraps)]
+#[allow(clippy::needless_pass_by_value)]
+fn parse_action(s: String) -> Result<CmdActParams, teloxide::utils::command::ParseError> {
+    let s = s.trim();
+
+    AVAILABLE_ACTIONS
+        .iter()
+        .find(|x| x.name() == s)
+        .map(|x| CmdActParams(x.clone()))
+        .ok_or_else(|| {
+            teloxide::utils::command::ParseError::IncorrectFormat(
+                anyhow::anyhow!("Unknown action. Use /list_actions to see the available actions.")
+                    .into(),
+            )
+        })
 }
 
 struct CmdFixParams(Vec<FixerInstance>);
@@ -356,6 +374,17 @@ async fn handle_command(msg: Message, command: BotCommand) -> ResponseResult<()>
                 .await?;
 
             TaskQueue::push(Task::fix_request(msg, fixers, status_message));
+        }
+        BotCommand::Act(action) => {
+            info!(?action, "Adding action request to queue");
+
+            let mut status_message = StatusMessage::from_message(&msg);
+
+            status_message
+                .update_message("Message queued. Waiting for spot in line...")
+                .await?;
+
+            TaskQueue::push(Task::action_request(msg, action, status_message));
         }
     }
 

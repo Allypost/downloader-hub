@@ -1,3 +1,4 @@
+mod action_request;
 mod download_request;
 mod fix_request;
 
@@ -6,6 +7,7 @@ use crate::queue::task::Task;
 pub static HANDLERS: &[&dyn Handler] = &[
     &download_request::DownloadRequestHandler,
     &fix_request::FixRequestHandler,
+    &action_request::ActionRequestHandler,
 ];
 
 #[async_trait::async_trait]
