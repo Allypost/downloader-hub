@@ -4,7 +4,7 @@ use url::Url;
 
 pub type UrlHeaders = HeaderMap;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct UrlWithMeta {
     url: Url,
     #[serde(with = "http_serde::header_map", default)]
@@ -79,6 +79,12 @@ impl From<String> for UrlWithMeta {
 impl From<&String> for UrlWithMeta {
     fn from(url: &String) -> Self {
         Self::from_url(url)
+    }
+}
+
+impl PartialOrd for UrlWithMeta {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.url.partial_cmp(&other.url)
     }
 }
 

@@ -89,6 +89,12 @@ impl ExtractedInfo {
         self.meta.insert(key.into(), value.into());
         self
     }
+
+    #[must_use]
+    pub fn dedup_urls(mut self) -> Self {
+        self.urls.dedup();
+        self
+    }
 }
 
 pub type PreferredDownloader = Arc<dyn Downloader>;
@@ -172,5 +178,17 @@ impl From<&String> for ExtractedUrlInfo {
 impl From<&str> for ExtractedUrlInfo {
     fn from(url: &str) -> Self {
         Self::new(url)
+    }
+}
+
+impl PartialEq for ExtractedUrlInfo {
+    fn eq(&self, other: &Self) -> bool {
+        self.url == other.url
+    }
+}
+
+impl PartialOrd for ExtractedUrlInfo {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.url.partial_cmp(&other.url)
     }
 }

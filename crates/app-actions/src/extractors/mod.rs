@@ -29,6 +29,7 @@ pub async fn extract_info(request: &ExtractInfoRequest) -> Result<ExtractedInfo,
                     "extractor",
                     serde_json::to_value(extractor).expect("Failed to serialize extractor"),
                 )
+                .dedup_urls()
             });
         }
     }
