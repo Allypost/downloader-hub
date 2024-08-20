@@ -83,7 +83,8 @@ impl YtDlp {
                 .arg("--no-part")
                 .arg("--no-mtime")
                 .arg("--no-embed-metadata")
-                .arg("--no-config");
+                .arg("--no-config")
+                .arg("--no-playlist");
 
             if !cookie_values.is_empty() {
                 debug!("Adding cookie headers: {:?}", &cookie_values);
