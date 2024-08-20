@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, trace, warn};
 
 use super::{ExtractInfoRequest, ExtractedInfo, Extractor};
-use crate::common::url::UrlWithMeta;
+use crate::extractors::ExtractedUrlInfo;
 
 pub mod mastodon;
 pub mod misskey;
@@ -102,7 +102,7 @@ trait APHandler: std::fmt::Debug + Send + Sync {
 
 #[derive(Debug)]
 enum HandleResult {
-    Handled(Vec<UrlWithMeta>),
+    Handled(Vec<ExtractedUrlInfo>),
     Delegated { url: String },
 }
 

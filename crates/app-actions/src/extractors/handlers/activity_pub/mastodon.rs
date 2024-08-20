@@ -5,7 +5,10 @@ use tracing::{debug, trace};
 use url::Url;
 
 use super::{node_info::NodeInfo, APHandler, HandleResult};
-use crate::common::request::Client;
+use crate::{
+    common::request::Client,
+    extractors::{handlers::twitter::Twitter, ExtractedUrlInfo},
+};
 
 #[derive(Debug)]
 pub struct MastodonHandler;
@@ -36,13 +39,15 @@ impl APHandler for MastodonHandler {
             });
         }
 
-        Ok(HandleResult::Handled(
-            toot_info
-                .media_urls()
-                .into_iter()
-                .map(|x| x.to_string().into())
-                .collect(),
-        ))
+        let mut urls = toot_info
+            .media_urls()
+            .into_iter()
+            .map(|x| x.to_string().into())
+            .collect::<Vec<ExtractedUrlInfo>>();
+
+        urls.push(Twitter.screenshot_tweet_url_info(url));
+
+        Ok(HandleResult::Handled(urls))
     }
 }
 

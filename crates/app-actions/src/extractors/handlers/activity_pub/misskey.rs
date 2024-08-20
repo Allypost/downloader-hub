@@ -5,7 +5,10 @@ use tracing::{debug, trace};
 use url::Url;
 
 use super::{node_info::NodeInfo, APHandler, HandleResult};
-use crate::common::request::Client;
+use crate::{
+    common::request::Client,
+    extractors::{handlers::twitter::Twitter, ExtractedUrlInfo},
+};
 
 #[derive(Debug)]
 pub struct MisskeyHandler;
@@ -34,13 +37,15 @@ impl APHandler for MisskeyHandler {
 
         debug!(?post_info, "Got post info");
 
-        Ok(HandleResult::Handled(
-            post_info
-                .media_urls()
-                .into_iter()
-                .map(|x| x.to_string().into())
-                .collect(),
-        ))
+        let mut urls = post_info
+            .media_urls()
+            .into_iter()
+            .map(|x| x.to_string().into())
+            .collect::<Vec<ExtractedUrlInfo>>();
+
+        urls.push(Twitter.screenshot_tweet_url_info(url));
+
+        Ok(HandleResult::Handled(urls))
     }
 }
 
