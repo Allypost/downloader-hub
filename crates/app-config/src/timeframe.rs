@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum Timeframe {
+    Nanoseconds(u64),
+    Milliseconds(u64),
     Seconds(u64),
     Minutes(u64),
     Hours(u64),
@@ -22,6 +24,8 @@ impl From<Timeframe> for Duration {
 impl From<&Timeframe> for Duration {
     fn from(val: &Timeframe) -> Self {
         match val {
+            Timeframe::Nanoseconds(ns) => Self::from_nanos(*ns),
+            Timeframe::Milliseconds(ms) => Self::from_millis(*ms),
             Timeframe::Seconds(s) => Self::from_secs(*s),
             Timeframe::Minutes(m) => Self::from_secs(*m * 60),
             Timeframe::Hours(h) => Self::from_secs(*h * 60 * 60),
@@ -92,6 +96,8 @@ impl Timeframe {
             "h" | "hr" | "hrs" | "hour" | "hours" => Ok(Self::Hours(num)),
             "min" | "mins" | "minute" | "minutes" => Ok(Self::Minutes(num)),
             "s" | "sec" | "secs" | "second" | "seconds" => Ok(Self::Seconds(num)),
+            "ms" | "msec" | "msecs" | "millisecond" | "milliseconds" => Ok(Self::Milliseconds(num)),
+            "ns" | "nsec" | "nsecs" | "nanosecond" | "nanoseconds" => Ok(Self::Nanoseconds(num)),
             _ => Err(TimeframeParseError(format!(
                 "invalid timeframe (invalid unit): {arg}"
             ))),
