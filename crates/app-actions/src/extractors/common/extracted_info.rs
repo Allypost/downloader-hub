@@ -66,6 +66,21 @@ impl ExtractedInfo {
     }
 
     #[must_use]
+    pub fn with_downloader_option<K, V>(mut self, key: K, value: V) -> Self
+    where
+        K: Into<String>,
+        V: Into<serde_json::Value>,
+    {
+        let key = key.into();
+        let value = value.into();
+        for x in &mut self.urls {
+            x.downloader_options.insert(key.clone(), value.clone());
+        }
+
+        self
+    }
+
+    #[must_use]
     pub fn with_meta<K, V>(mut self, key: K, value: V) -> Self
     where
         K: Into<String>,
@@ -118,6 +133,15 @@ impl ExtractedUrlInfo {
         V: Into<serde_json::Value>,
     {
         self.downloader_options.insert(key.into(), value.into());
+        self
+    }
+
+    #[must_use]
+    pub fn with_downloader_options<T>(mut self, options: T) -> Self
+    where
+        T: Into<DownloaderOptions>,
+    {
+        self.downloader_options = options.into();
         self
     }
 

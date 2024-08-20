@@ -3,7 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::{
     common::url::UrlWithMeta,
@@ -75,7 +75,36 @@ impl DownloadRequest {
     }
 
     #[must_use]
-    pub fn downloader_option(&self, key: &str) -> Option<&serde_json::Value> {
+    pub fn with_downloader_options<T>(mut self, options: T) -> Self
+    where
+        T: Into<DownloaderOptions>,
+    {
+        self.downloader_options = options.into();
+        self
+    }
+
+    #[must_use]
+    pub fn downloader_option_raw(&self, key: &str) -> Option<&serde_json::Value> {
         self.downloader_options.get(key)
+    }
+
+    #[must_use]
+    pub fn downloader_option<T>(&self, key: &str) -> Option<T>
+    where
+        T: DeserializeOwned,
+    {
+        let val = self.downloader_options.get(key)?.clone();
+
+        serde_json::from_value(val).ok()
+    }
+
+    #[must_use]
+    pub fn downloader_options<T>(&self) -> Option<T>
+    where
+        T: DeserializeOwned,
+    {
+        let val = serde_json::to_value(self.downloader_options.clone()).ok()?;
+
+        serde_json::from_value(val).ok()
     }
 }

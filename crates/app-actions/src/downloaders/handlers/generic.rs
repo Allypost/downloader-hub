@@ -1,5 +1,6 @@
 use std::{ffi::OsString, path::PathBuf, string::ToString};
 
+use app_config::timeframe::Timeframe;
 use app_helpers::id::time_id;
 use http::header;
 use mime2ext::mime2ext;
@@ -10,7 +11,10 @@ use unicode_segmentation::UnicodeSegmentation;
 use url::Url;
 
 use super::{DownloadRequest, DownloadResult, Downloader, DownloaderReturn};
-use crate::{common::request::Client, downloaders::helpers::headers::content_disposition};
+use crate::{
+    common::request::Client,
+    downloaders::{helpers::headers::content_disposition, DownloaderOptions},
+};
 
 pub const MAX_FILENAME_LENGTH: usize = 120;
 
@@ -33,17 +37,59 @@ impl Downloader for Generic {
     }
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct GenericDownloaderOptions {
+    timeout: Option<Timeframe>,
+}
+impl GenericDownloaderOptions {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    #[must_use]
+    pub fn with_timeout<T>(mut self, timeout: Option<T>) -> Self
+    where
+        T: Into<Timeframe>,
+    {
+        self.timeout = timeout.map(Into::into);
+        self
+    }
+}
+impl From<GenericDownloaderOptions> for DownloaderOptions {
+    fn from(val: GenericDownloaderOptions) -> Self {
+        let val = serde_json::to_value(val)
+            .ok()
+            .and_then(|x| x.as_object().cloned())
+            .expect("Failed to serialize options");
+
+        val.into_iter().collect()
+    }
+}
+
 impl Generic {
+    #[must_use]
+    pub fn options() -> GenericDownloaderOptions {
+        GenericDownloaderOptions::default()
+    }
+
     pub async fn download_one(
         &self,
         request_info: &DownloadRequest,
     ) -> Result<DownloadResult, String> {
         let url = &request_info.url;
+        let options = request_info.downloader_options::<GenericDownloaderOptions>();
 
         info!(?url, dir = ?request_info.download_dir(), "Downloading with generic downloader");
 
-        let mut res = Client::base_with_url(url)?
-            .headers(url.headers().clone())
+        let mut res = Client::base_with_url(url)?.headers(url.headers().clone());
+
+        if let Some(timeout) = options.and_then(|x| x.timeout) {
+            res = res.timeout(timeout.into());
+        }
+
+        let mut res = res
             .send()
             .await
             .map_err(|e| format!("Failed to send request: {:?}", e))?

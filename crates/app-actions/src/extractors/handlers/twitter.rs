@@ -1,6 +1,6 @@
 use std::string::ToString;
 
-use app_config::Config;
+use app_config::{timeframe::Timeframe, Config};
 use http::{header, HeaderMap};
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -55,7 +55,7 @@ impl Extractor for Twitter {
         let tweet_info = match get_tweet_info_from_url(request.url.as_str())? {
             Some(x) => x,
             None => {
-                let screenshot_url = self.screenshot_tweet_url(request.url.as_str());
+                let screenshot_url = self.screenshot_tweet_url_info(request.url.as_str());
                 return Ok(ExtractedInfo::from_url(request, screenshot_url));
             }
         };
@@ -73,16 +73,18 @@ impl Extractor for Twitter {
 
         trace!(?tweet_data, "Got tweet data");
 
-        let mut tweet_media = get_tweet_media_urls(&tweet_data).unwrap_or_default();
+        let mut tweet_media = get_tweet_media_urls(&tweet_data)
+            .unwrap_or_default()
+            .into_iter()
+            .map(Into::into)
+            .collect::<Vec<ExtractedUrlInfo>>();
 
         trace!(?tweet_media, "Got tweet media");
 
-        let tweet_screenshot_url = self.screenshot_tweet_url(request.url.as_str());
+        let tweet_screenshot_url = self.screenshot_tweet_url_info(request.url.as_str());
 
         trace!("Adding Tweet screenshot URL: {:?}", &tweet_screenshot_url);
-        tweet_media.push(TweetMedia::Photo {
-            url: tweet_screenshot_url,
-        });
+        tweet_media.push(tweet_screenshot_url);
 
         Ok(ExtractedInfo::from_urls(request, tweet_media))
     }
@@ -100,6 +102,13 @@ impl Twitter {
                 .append_key_only(url)
                 .finish(),
         )
+    }
+
+    #[must_use]
+    pub fn screenshot_tweet_url_info(&self, url: &str) -> ExtractedUrlInfo {
+        ExtractedUrlInfo::new(self.screenshot_tweet_url(url))
+            .with_preferred_downloader(Some(Generic))
+            .with_downloader_options(Generic::options().with_timeout(Some(Timeframe::Seconds(60))))
     }
 
     pub fn is_post_url(url: &str) -> bool {
