@@ -5,7 +5,10 @@ use tracing::{debug, trace};
 use url::Url;
 
 use super::{ExtractInfoRequest, ExtractedInfo, Extractor};
-use crate::common::{request::USER_AGENT, url::UrlWithMeta};
+use crate::{
+    common::{request::USER_AGENT, url::UrlWithMeta},
+    downloaders::handlers::generic::Generic,
+};
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Tiktok;
@@ -26,7 +29,7 @@ impl Extractor for Tiktok {
             .await
             .map_err(|e| format!("Failed to get media download urls for tiktok post: {:?}", e))?;
 
-        Ok(ExtractedInfo::from_url(request, media_urls))
+        Ok(ExtractedInfo::from_url(request, media_urls).with_preferred_downloader(Some(Generic)))
     }
 }
 
