@@ -125,18 +125,14 @@ impl Generic {
             .or_else(|| {
                 let url = url.url();
                 debug!(?url, "Using url as filename");
-                url_to_filename(url, taken_filename_len)
-            });
+                url_to_filename(url, taken_filename_len).map(|x| x + ".bin")
+            })
+            .unwrap_or_else(|| "unknown.bin".to_string());
 
         trace!(?req_file_name, "Got file name from request");
 
-        if let Some(url_file_name) = req_file_name {
-            file_name.push(".");
-            file_name.push(url_file_name);
-        }
-
         file_name.push(".");
-        file_name.push(extension);
+        file_name.push(req_file_name);
 
         let file_path = request_info.download_dir().join(file_name);
         debug!(?file_path, "Writing to file");
