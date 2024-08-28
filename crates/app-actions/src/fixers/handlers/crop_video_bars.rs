@@ -5,7 +5,7 @@ use std::{
 };
 
 use app_config::Config;
-use app_helpers::{ffprobe, file_time::transfer_file_times, trash::move_to_trash};
+use app_helpers::{ffprobe, trash::move_to_trash};
 use futures::{stream::FuturesUnordered, StreamExt};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -138,10 +138,6 @@ async fn do_auto_crop_video(file_path: &Path) -> Result<PathBuf, CropError> {
             format!("Command exited with non-zero exit code, {:?}", res.status),
             res.into(),
         )));
-    }
-
-    if let Err(e) = transfer_file_times(file_path, &new_filename) {
-        warn!("Failed to transfer file times of {file_path:?}: {e:?}");
     }
 
     if let Err(e) = move_to_trash(file_path) {

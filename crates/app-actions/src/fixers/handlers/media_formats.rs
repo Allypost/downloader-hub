@@ -4,7 +4,6 @@ use anyhow::anyhow;
 use app_config::Config;
 use app_helpers::{
     ffprobe::{self, FfProbeResult, Stream},
-    file_time::transferable_file_times,
     id::time_thread_id,
     temp_dir::TempDir,
     trash::move_to_trash,
@@ -242,8 +241,6 @@ async fn transcode_media_into(
                 to = to_extension
             );
 
-            let transfer_file_times = transferable_file_times(from_path);
-
             let new_file_path = from_path.with_extension(to_extension);
 
             trace!(
@@ -263,17 +260,6 @@ async fn transcode_media_into(
                 trace!("Deleting old file {path:?}", path = from_path);
                 if let Err(e) = move_to_trash(from_path) {
                     debug!("Failed to delete {path:?}: {e:?}", path = from_path);
-                }
-            }
-
-            match transfer_file_times {
-                Ok(transfer_file_times_to) => {
-                    if let Err(e) = transfer_file_times_to(&new_file_path) {
-                        debug!("Failed to transfer file times: {e:?}");
-                    }
-                }
-                Err(e) => {
-                    debug!("Failed to transfer file times: {e:?}");
                 }
             }
 
