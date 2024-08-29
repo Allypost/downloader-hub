@@ -21,6 +21,7 @@ dptree = "0.3.0"
 futures.workspace = true
 once_cell.workspace = true
 parking_lot = "0.12.3"
+serde_json.workspace = true
 teloxide = { version = "0.13.0", default-features = false, features = ["cache-me", "macros", "rustls", "trace-adaptor"] }
 thiserror.workspace = true
 tokio.workspace = true

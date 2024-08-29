@@ -1460,6 +1460,7 @@ dependencies = [
  "futures",
  "once_cell",
  "parking_lot",
+ "serde_json",
  "teloxide",
  "thiserror",
  "tokio",

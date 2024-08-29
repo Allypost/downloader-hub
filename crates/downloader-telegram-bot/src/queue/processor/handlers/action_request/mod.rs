@@ -27,6 +27,7 @@ impl Handler for ActionRequestHandler {
         let TaskInfo::ActionRequest {
             message: msg,
             action,
+            options,
         } = task.info()
         else {
             return Err(HandlerError::Fatal("Invalid task info".to_string()));
@@ -70,7 +71,8 @@ impl Handler for ActionRequestHandler {
             .await;
 
         let req = ActionRequest::in_same_dir(path_to_act_on)
-            .ok_or_else(|| HandlerError::Fatal("Failed to get action request".to_string()))?;
+            .ok_or_else(|| HandlerError::Fatal("Failed to get action request".to_string()))?
+            .with_options(options.clone());
 
         trace!(?req, "Got action request");
 

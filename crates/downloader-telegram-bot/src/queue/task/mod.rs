@@ -1,6 +1,9 @@
 use std::path::PathBuf;
 
-use app_actions::{actions::handlers::ActionEntry, fixers::handlers::FixerInstance};
+use app_actions::{
+    actions::{handlers::ActionEntry, ActionOptions},
+    fixers::handlers::FixerInstance,
+};
 use teloxide::{
     prelude::*,
     types::{Message, ReplyParameters},
@@ -25,6 +28,7 @@ pub enum TaskInfo {
     ActionRequest {
         message: Message,
         action: ActionEntry,
+        options: ActionOptions,
     },
 }
 
@@ -53,9 +57,17 @@ impl Task {
     pub fn action_request(
         message: Message,
         action: ActionEntry,
+        options: ActionOptions,
         status_message: StatusMessage,
     ) -> Self {
-        Self::new(TaskInfo::ActionRequest { message, action }, status_message)
+        Self::new(
+            TaskInfo::ActionRequest {
+                message,
+                action,
+                options,
+            },
+            status_message,
+        )
     }
 }
 

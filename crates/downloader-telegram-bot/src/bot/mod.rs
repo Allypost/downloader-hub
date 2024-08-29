@@ -3,7 +3,7 @@ pub mod helpers;
 use std::{collections::HashMap, string::ToString};
 
 use app_actions::{
-    actions::{handlers::ActionEntry, AVAILABLE_ACTIONS},
+    actions::{handlers::ActionEntry, ActionOptions, AVAILABLE_ACTIONS},
     downloaders::AVAILABLE_DOWNLOADERS,
     extractors::AVAILABLE_EXTRACTORS,
     fixers::{handlers::FixerInstance, AVAILABLE_FIXERS},
@@ -80,19 +80,30 @@ enum BotCommand {
         description = "Run the specified action on the message.",
         parse_with = parse_action,
     )]
-    Act(ActionEntry),
+    Act(ActionEntry, ActionOptions),
 }
 
-struct CmdActParams(ActionEntry);
+struct CmdActParams(ActionEntry, ActionOptions);
 #[allow(clippy::unnecessary_wraps)]
 #[allow(clippy::needless_pass_by_value)]
 fn parse_action(s: String) -> Result<CmdActParams, teloxide::utils::command::ParseError> {
-    let s = s.trim();
+    let (name, opts) = s.split_once(' ').unwrap_or((s.as_str(), ""));
+    let name = name.trim();
 
     AVAILABLE_ACTIONS
         .iter()
-        .find(|x| x.name() == s)
-        .map(|x| CmdActParams(x.clone()))
+        .find(|x| x.name() == name)
+        .map(|x| {
+            let opts = opts
+                .trim()
+                .split(' ')
+                .filter_map(parse_option_string)
+                .collect::<ActionOptions>();
+
+            trace!(?opts, "Parsed action options");
+
+            CmdActParams(x.clone(), opts)
+        })
         .ok_or_else(|| {
             teloxide::utils::command::ParseError::IncorrectFormat(
                 anyhow::anyhow!("Unknown action. Use /list_actions to see the available actions.")
@@ -375,8 +386,8 @@ async fn handle_command(msg: Message, command: BotCommand) -> ResponseResult<()>
 
             TaskQueue::push(Task::fix_request(msg, fixers, status_message));
         }
-        BotCommand::Act(action) => {
-            info!(?action, "Adding action request to queue");
+        BotCommand::Act(action, options) => {
+            info!(?action, ?options, "Adding action request to queue");
 
             let mut status_message = StatusMessage::from_message(&msg);
 
@@ -384,7 +395,7 @@ async fn handle_command(msg: Message, command: BotCommand) -> ResponseResult<()>
                 .update_message("Message queued. Waiting for spot in line...")
                 .await?;
 
-            TaskQueue::push(Task::action_request(msg, action, status_message));
+            TaskQueue::push(Task::action_request(msg, action, options, status_message));
         }
     }
 
@@ -403,4 +414,28 @@ async fn handle_message(msg: Message) -> ResponseResult<()> {
     TaskQueue::push(Task::download_request(msg, status_message));
 
     Ok(())
+}
+
+fn parse_option_string(s: &str) -> Option<(String, serde_json::Value)> {
+    let (k, v) = s.split_once('=').unwrap_or((s, ""));
+    let (k, v) = (k.trim(), v.trim());
+
+    if k.is_empty() {
+        return None;
+    }
+
+    let v = v.replace('+', " ");
+
+    let (k, v) = {
+        let key = k.into();
+
+        match v.as_str() {
+            "" | "true" | "TRUE" => (key, true.into()),
+            "false" | "FALSE" => (key, false.into()),
+            _ if v.parse::<f64>().is_ok() => (key, v.parse::<f64>().unwrap_or_default().into()),
+            _ => (key, v.into()),
+        }
+    };
+
+    Some((k, v))
 }
