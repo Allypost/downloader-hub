@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use futures::executor;
 use tokio::runtime::Handle;
+pub use tryhard;
 
 pub fn run_async<T>(fut: impl std::future::Future<Output = T>) -> T {
     let handle = Handle::current();
