@@ -23,7 +23,7 @@ impl Action for RenameToId {
     async fn run(&self, request: &ActionRequest) -> Result<ActionResult, ActionError> {
         rename_file_to_id(request)
             .await
-            .map(|x| ActionResult::new(request.clone(), vec![x]))
+            .map(|x| ActionResult::path(request, x))
     }
 }
 

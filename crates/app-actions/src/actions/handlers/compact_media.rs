@@ -68,6 +68,6 @@ impl Action for CompactMedia {
             ));
         }
 
-        Ok(ActionResult::from_path(request, output_file_path))
+        Ok(ActionResult::path(request, output_file_path))
     }
 }

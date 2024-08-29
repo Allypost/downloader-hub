@@ -34,7 +34,7 @@ impl Action for SplitScenes {
     async fn run(&self, request: &ActionRequest) -> Result<ActionResult, ActionError> {
         do_split_video_into_scenes(&request.file_path, &request.output_dir)
             .await
-            .map(|x| ActionResult::new(request.clone(), x))
+            .map(|x| ActionResult::paths(request, x))
     }
 }
 

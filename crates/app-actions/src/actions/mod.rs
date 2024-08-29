@@ -6,7 +6,7 @@ use std::fmt::Debug;
 pub use common::{
     action_error::ActionError,
     action_request::{ActionOptions, ActionRequest},
-    action_result::ActionResult,
+    action_result::{ActionResult, ActionResultData},
 };
 pub use handlers::AVAILABLE_ACTIONS;
 

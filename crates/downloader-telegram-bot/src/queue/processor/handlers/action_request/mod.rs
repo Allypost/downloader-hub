@@ -1,4 +1,4 @@
-use app_actions::actions::ActionRequest;
+use app_actions::actions::{ActionRequest, ActionResultData};
 use app_helpers::temp_dir::TempDir;
 use tracing::{info, trace};
 
@@ -88,17 +88,30 @@ impl Handler for ActionRequestHandler {
 
         trace!(?action_result, "Got action result");
 
-        if action_result.file_paths.is_empty() {
-            task.update_status_message("Action didn't produce any files")
-                .await;
-            return Ok(HandlerReturn::default().cleanup_status_message(false));
+        match action_result.data {
+            ActionResultData::Paths(paths) => {
+                if paths.is_empty() {
+                    task.update_status_message("Action didn't produce any files")
+                        .await;
+                    return Ok(HandlerReturn::default().cleanup_status_message(false));
+                }
+
+                task.update_status_message("Uploading fixed file...").await;
+
+                task.reply_with_files(paths)
+                    .await
+                    .map_err(HandlerError::Fatal)?;
+            }
+            ActionResultData::Text(text) => {
+                if text.is_empty() {
+                    task.update_status_message("Action didn't produce any text")
+                        .await;
+                    return Ok(HandlerReturn::default().cleanup_status_message(false));
+                }
+
+                task.send_additional_status_message(&text).await;
+            }
         }
-
-        task.update_status_message("Uploading fixed file...").await;
-
-        task.reply_with_files(action_result.file_paths)
-            .await
-            .map_err(HandlerError::Fatal)?;
 
         Ok(HandlerReturn::default())
     }
