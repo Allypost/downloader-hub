@@ -26,4 +26,9 @@ impl FixerError {
     {
         Self::FailedFix(err.into())
     }
+
+    #[must_use]
+    pub const fn should_send_as_response(&self) -> bool {
+        matches!(self, Self::FailedFix(_))
+    }
 }

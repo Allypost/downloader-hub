@@ -105,6 +105,13 @@ async fn handle_task(task: &Task) {
         Err(e) => e,
     };
 
+    if err.should_send_as_response() {
+        debug!(?err, "Got error that should be sent as response");
+        task.update_status_message(&err.to_string()).await;
+
+        return;
+    }
+
     warn!(?err, "Got error processing task");
     if let Err(e) = should_retry(task, err) {
         error!(?e, "Task will not be retried");

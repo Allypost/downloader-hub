@@ -81,10 +81,7 @@ impl Handler for ActionRequestHandler {
             return Ok(HandlerReturn::default().cleanup_status_message(false));
         }
 
-        let action_result = action
-            .run(&req)
-            .await
-            .map_err(|e| HandlerError::Fatal(format!("Failed to run action: {e}")))?;
+        let action_result = action.run(&req).await?;
 
         trace!(?action_result, "Got action result");
 

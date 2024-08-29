@@ -47,9 +47,19 @@ pub enum HandlerError {
     Fatal(String),
     #[error("Failed to fix: `{0}`")]
     FixFailed(#[from] app_actions::fixers::FixerError),
+    #[error("Failed to run action: `{0}`")]
+    ActionFailed(#[from] app_actions::actions::ActionError),
 }
 impl HandlerError {
     pub const fn is_fatal(&self) -> bool {
         matches!(self, Self::Fatal(_))
+    }
+
+    pub const fn should_send_as_response(&self) -> bool {
+        match self {
+            Self::ActionFailed(x) if x.should_send_as_response() => true,
+            Self::FixFailed(x) if x.should_send_as_response() => true,
+            _ => false,
+        }
     }
 }
