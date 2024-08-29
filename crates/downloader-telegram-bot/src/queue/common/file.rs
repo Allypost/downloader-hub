@@ -285,11 +285,12 @@ where
         let input_file = InputFile::file(file_info.path.clone());
 
         // Handle the GIFs as animations because Telegram
+        // Also handle PNGs as documents to prevent Telegram from converting them to jpgs
         // Optional todo: Also handle silent videos as animations
         if file_info
             .mime
             .as_ref()
-            .is_some_and(|x| x.essence_str() == "image/gif")
+            .is_some_and(|x| matches!(x.essence_str(), "image/gif" | "image/png"))
         {
             return FileInfoWithMedia {
                 file_info,
