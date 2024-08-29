@@ -4,7 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use app_helpers::futures::run_async;
+use app_helpers::file_type::infer_file_type;
 use axum::{
     body::Body,
     http::{
@@ -16,8 +16,6 @@ use axum::{
 use chrono::{DateTime, Utc};
 use tower_http::services::ServeFile;
 use tracing::warn;
-
-use crate::service::file::FileService;
 
 pub struct RangeResponder {
     path: PathBuf,
@@ -46,9 +44,9 @@ impl RangeResponder {
 
         {
             let path = self.path.as_ref();
-            let content_type = run_async(FileService::infer_file_type(path));
+            let content_type = infer_file_type(path);
             if let Ok(content_type) = content_type {
-                if let Ok(content_type) = content_type.parse() {
+                if let Ok(content_type) = content_type.essence_str().parse() {
                     res.append(header::CONTENT_TYPE, content_type);
                 }
             }

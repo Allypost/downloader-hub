@@ -3,7 +3,7 @@ use std::{path::Path, string::ToString, time::Duration};
 use app_helpers::{
     file_name::file_name_with_suffix,
     file_type::{infer_file_type, mime},
-    futures::{run_async, tryhard},
+    futures::tryhard,
 };
 use futures::StreamExt;
 use http::header;
@@ -93,8 +93,14 @@ impl Action for RemoveBackground {
             }
         })
         .retries(5)
-        .fixed_backoff(Duration::from_secs(5))
-        .await?;
+        .fixed_backoff(Duration::from_secs(1))
+        .await;
+
+        if let Err(e) = remote_file_url.delete_uploaded_file().await {
+            warn!("Failed to delete uploaded file: {e:?}");
+        }
+
+        let bg_removed_url = bg_removed_url?;
 
         trace!(?bg_removed_url, "Removed background url");
 
@@ -243,43 +249,37 @@ impl TempFileUpload {
 
         Ok(new)
     }
-}
-impl Drop for TempFileUpload {
-    fn drop(&mut self) {
+
+    async fn delete_uploaded_file(&self) -> Result<(), ActionError> {
         let token = match self.token.clone() {
             Some(x) => x,
-            None => return,
+            None => return Ok(()),
         };
 
         trace!(url = ?self.file_url, ?token, "Deleting remote file");
 
-        let client = match Client::base() {
-            Ok(x) => x,
-            Err(e) => {
-                warn!("Failed to create client: {e:?}");
-                return;
-            }
-        };
+        let client = Client::base().map_err(|e| {
+            ActionError::FailedAction(format!("Failed to create client: {e:?}").into())
+        })?;
 
         let url = self.file_url.clone();
 
-        let res = run_async(async move {
-            client
-                .post(url)
-                .multipart(
-                    multipart::Form::new()
-                        .part("token", multipart::Part::text(token))
-                        .part("delete", multipart::Part::text("")),
-                )
-                .send()
-                .await
-                .and_then(reqwest::Response::error_for_status)
-        });
+        let res = client
+            .post(url)
+            .multipart(
+                multipart::Form::new()
+                    .part("token", multipart::Part::text(token))
+                    .part("delete", multipart::Part::text("")),
+            )
+            .send()
+            .await
+            .and_then(reqwest::Response::error_for_status)
+            .map_err(|e| {
+                ActionError::FailedAction(format!("Failed to delete remote file: {e:?}").into())
+            });
 
         trace!(?res, "Deleted remote file");
 
-        if let Err(e) = res {
-            warn!(url = ?self.file_url, "Failed to delete remote file: {e:?}");
-        }
+        res.map(|_| ())
     }
 }
