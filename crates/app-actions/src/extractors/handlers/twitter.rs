@@ -62,13 +62,6 @@ impl Extractor for Twitter {
 
         trace!(?tweet_info, "Got tweet info");
 
-        // // the `i` "username" is for media links, not direct link to tweet
-        // if tweet_info.username == "i" {
-        //     trace!("Tweet is a media link, not a tweet link. Letting yt-dlp handle it");
-        //     return Ok(ExtractedInfo::from_url(request, request.url.as_str())
-        //         .with_preferred_downloader(YtDlpDownloader));
-        // }
-
         let tweet_data = get_tweet_data(&tweet_info.status_id).await?;
 
         trace!(?tweet_data, "Got tweet data");
@@ -81,10 +74,12 @@ impl Extractor for Twitter {
 
         trace!(?tweet_media, "Got tweet media");
 
-        let tweet_screenshot_url = self.screenshot_tweet_url_info(request.url.as_str());
+        if tweet_info.username != "i" {
+            let tweet_screenshot_url = self.screenshot_tweet_url_info(request.url.as_str());
 
-        trace!("Adding Tweet screenshot URL: {:?}", &tweet_screenshot_url);
-        tweet_media.push(tweet_screenshot_url);
+            trace!("Adding Tweet screenshot URL: {:?}", &tweet_screenshot_url);
+            tweet_media.push(tweet_screenshot_url);
+        }
 
         Ok(ExtractedInfo::from_urls(request, tweet_media))
     }
