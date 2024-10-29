@@ -1,4 +1,5 @@
 pub mod activity_pub;
+pub mod bsky;
 pub mod fallthough;
 pub mod imgur;
 pub mod instagram;
@@ -28,6 +29,7 @@ pub fn available_extractors() -> Vec<ExtractorEntry> {
         Arc::new(tumblr::Tumblr),
         Arc::new(twitter::Twitter),
         Arc::new(music::Music),
+        Arc::new(bsky::Bsky),
         Arc::new(activity_pub::ActivityPub),
         Arc::new(fallthough::Fallthrough),
     ]
