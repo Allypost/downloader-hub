@@ -10,8 +10,8 @@ license.workspace = true
 
 [dependencies]
 anyhow.workspace = true
-clap = { version = "4.5.16", features = ["derive", "env"] }
-clap_complete = "4.5.18"
+clap = { version = "4.5.20", features = ["derive", "env"] }
+clap_complete = "4.5.35"
 directories = "5.0.1"
 once_cell.workspace = true
 resolve-path = "0.1.0"

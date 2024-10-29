@@ -15,8 +15,8 @@ app-helpers.workspace = true
 app-logger.workspace = true
 app-migration = { version = "*", path = "../app-migration" }
 app-tasks.workspace = true
-axum = { version = "0.7.5", features = ["macros", "multipart"] }
-axum-extra = { version = "0.9.3", features = [
+axum = { version = "0.7.7", features = ["macros", "multipart"] }
+axum-extra = { version = "0.9.4", features = [
     "erased-json",
     "form",
     "multipart",
@@ -30,7 +30,7 @@ hmac = "0.12.1"
 http-range-header = "0.4.1"
 listenfd = "1.0.1"
 once_cell.workspace = true
-sea-orm = { version = "1.0.0", features = [
+sea-orm = { version = "1.1.0", features = [
     "macros",
     "sqlx-postgres",
     "runtime-tokio-rustls",
