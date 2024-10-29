@@ -99,21 +99,19 @@ impl Config {
     where
         T: Serialize + ?Sized,
     {
-        match dump_type {
-            Some(dump_type) => {
-                let out = match dump_type {
-                    None | Some(DumpConfigType::Json) => serde_json::to_string_pretty(data)
-                        .expect("Failed to serialize config to JSON"),
+        if let Some(dump_type) = dump_type {
+            let out = match dump_type {
+                None | Some(DumpConfigType::Json) => {
+                    serde_json::to_string_pretty(data).expect("Failed to serialize config to JSON")
+                }
 
-                    Some(DumpConfigType::Toml) => {
-                        toml::to_string_pretty(data).expect("Failed to serialize config to TOML")
-                    }
-                };
+                Some(DumpConfigType::Toml) => {
+                    toml::to_string_pretty(data).expect("Failed to serialize config to TOML")
+                }
+            };
 
-                println!("{}", out.trim());
-                std::process::exit(0);
-            }
-            None => (),
+            println!("{}", out.trim());
+            std::process::exit(0);
         }
     }
 

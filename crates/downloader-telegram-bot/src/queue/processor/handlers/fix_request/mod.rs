@@ -57,7 +57,7 @@ impl Handler for FixRequestHandler {
 
         trace!(?file_id, "Got file id from message");
 
-        let temp_download_dir = TempDir::in_tmp_with_prefix(&format!(
+        let temp_download_dir = TempDir::in_tmp_with_prefix(format!(
             "downloader-hub.telegram-download.{}.",
             task.id()
         ))?;

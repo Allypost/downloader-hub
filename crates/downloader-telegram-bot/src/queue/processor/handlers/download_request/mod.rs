@@ -42,7 +42,7 @@ impl Handler for DownloadRequestHandler {
 
         info!(task_id = ?task.id(), "Handling download request");
 
-        let temp_download_dir = TempDir::in_tmp_with_prefix(&format!(
+        let temp_download_dir = TempDir::in_tmp_with_prefix(format!(
             "downloader-hub.telegram-download.{}.",
             task.id()
         ))?;
