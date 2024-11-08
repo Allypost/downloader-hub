@@ -248,7 +248,7 @@ async fn get_crop_filter(
     let cropdetect_filter = {
         let mut filters = vec![];
 
-        filters.push("eq=contrast=1.5");
+        // filters.push("eq=contrast=1.5");
 
         match border_color {
             BorderColor::White => {
