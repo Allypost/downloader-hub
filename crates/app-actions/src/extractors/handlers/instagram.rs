@@ -101,13 +101,7 @@ async fn get_media_urls(url: &str) -> Result<Vec<String>, String> {
 async fn get_api_response(post_id: &str) -> Result<InstagramXDTGraphMedia, String> {
     let query_variables = serde_json::json!({
         "shortcode": post_id,
-        "fetch_comment_count": 0,
-        "parent_comment_count": 0,
-        "child_comment_count": 0,
-        "fetch_like_count": 0,
         "fetch_tagged_user_count": null,
-        "fetch_preview_comment_count": 2,
-        "has_threaded_comments": true,
         "hoisted_comment_id": null,
         "hoisted_reply_id": null,
     });
@@ -120,7 +114,7 @@ async fn get_api_response(post_id: &str) -> Result<InstagramXDTGraphMedia, Strin
 
         q.append_pair("variables", &query_variables_str);
         q.append_pair("server_timestamps", "true");
-        q.append_pair("doc_id", "25531498899829322");
+        q.append_pair("doc_id", "8845758582119845");
 
         q.finish()
     };
