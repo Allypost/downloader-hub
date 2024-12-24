@@ -9,6 +9,8 @@
 !.docker/app/update_yt-dlp.sh
 docker-compose.yml
 docker-compose.*.yml
+compose.yaml
+compose.*.yaml
 
 # misc
 .DS_Store
