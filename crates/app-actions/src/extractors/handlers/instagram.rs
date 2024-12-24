@@ -133,8 +133,15 @@ async fn get_api_response(post_id: &str) -> Result<InstagramXDTGraphMedia, Strin
 
     trace!("Got response: {:?}", &resp);
 
-    resp.get("data")
-        .and_then(|x| x.get("xdt_shortcode_media"))
+    let media = resp.get("data").and_then(|x| x.get("xdt_shortcode_media"));
+    trace!(?media, "Got media");
+
+    if let Some(serde_json::Value::Null) = media {
+        debug!("No media found. Post is probably age restricted.");
+        return Err("No media found. Post is probably age restricted.".to_string());
+    }
+
+    media
         .and_then(|x| serde_json::from_value::<InstagramXDTGraphMedia>(x.clone()).ok())
         .ok_or_else(|| "Failed to parse media from response".to_string())
 }
