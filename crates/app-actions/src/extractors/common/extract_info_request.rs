@@ -4,13 +4,22 @@ use url::Url;
 
 use crate::common::request::{Client, RequestBuilder};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct ExtractInfoRequest {
     pub url: Url,
     #[serde(with = "http_serde::method", default = "default_get")]
     pub method: Method,
     #[serde(with = "http_serde::header_map", default)]
     pub headers: HeaderMap,
+}
+impl std::fmt::Debug for ExtractInfoRequest {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ExtractInfoRequest")
+            .field("url", &self.url.as_str())
+            .field("method", &self.method)
+            .field("headers", &self.headers)
+            .finish()
+    }
 }
 
 impl ExtractInfoRequest {

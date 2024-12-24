@@ -21,7 +21,9 @@ where
     let info = match extractors::extract_info(&request).await {
         Ok(x) => x,
         Err(e) => {
-            return vec![Err(format!("Failed to extract info from {request:?}: {e}"))];
+            return vec![Err(format!(
+                "Failed to extract info from {request:?}: <u>{e}</u>"
+            ))];
         }
     };
 
