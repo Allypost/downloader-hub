@@ -30,7 +30,7 @@ impl Fixer for FileName {
 async fn fix_file_name(request: FixRequest) -> FixerReturn {
     let file_path = request.file_path.clone();
     debug!("Checking file name for {file_path:?}...");
-    let name = file_path.file_stem().and_then(|x| return x.to_str());
+    let name = file_path.file_stem().and_then(|x| x.to_str());
 
     let new_name = match name {
         Some(name) if !name.is_ascii() => {
@@ -48,7 +48,7 @@ async fn fix_file_name(request: FixRequest) -> FixerReturn {
 
     let extension = file_path
         .extension()
-        .and_then(|x| return x.to_str())
+        .and_then(|x| x.to_str())
         .ok_or_else(|| FileNameError::NoExtension(file_path.clone()))
         .map_err(FixerError::failed_fix)?;
 
