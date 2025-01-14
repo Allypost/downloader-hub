@@ -2,14 +2,18 @@ use std::{
     ffi::OsStr,
     fmt::Display,
     path::{Path, PathBuf},
+    process::Stdio,
 };
 
 use app_config::Config;
-use app_helpers::{ffprobe, trash::move_to_trash};
-use futures::{stream::FuturesUnordered, StreamExt};
+use app_helpers::{ffprobe, temp_dir::TempDir, trash::move_to_trash};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use tokio::process::Command;
+use tokio::{
+    fs,
+    io::{AsyncBufReadExt, BufReader},
+    process::Command,
+};
 use tracing::{debug, trace, warn};
 
 use crate::fixers::{
@@ -23,6 +27,13 @@ pub struct CropVideoBars;
 #[async_trait::async_trait]
 #[typetag::serde]
 impl Fixer for CropVideoBars {
+    fn can_run(&self) -> bool {
+        Config::global()
+            .dependency_paths
+            .imagemagick_path()
+            .is_some()
+    }
+
     async fn can_run_for(&self, request: &FixRequest) -> bool {
         get_video_stream(&request.file_path)
             .await
@@ -48,13 +59,6 @@ impl Fixer for CropVideoBars {
 async fn do_auto_crop_video(file_path: &Path) -> Result<PathBuf, CropError> {
     debug!("Auto cropping video {file_path:?}");
 
-    let file_path_str = file_path.to_str().ok_or_else(|| {
-        CropError::InvalidPath(
-            file_path.to_path_buf(),
-            "Failed to convert path to string".to_string(),
-        )
-    })?;
-
     let video_stream = get_video_stream(file_path).await?;
 
     let (w, h) = {
@@ -74,28 +78,21 @@ async fn do_auto_crop_video(file_path: &Path) -> Result<PathBuf, CropError> {
         }
     };
 
-    let crop_filters = {
-        let crop_filters = vec![BorderColor::White, BorderColor::Black]
-            .into_iter()
-            .map(|color| async move { get_crop_filter(file_path_str, &color).await.ok() })
-            .collect::<FuturesUnordered<_>>()
-            .collect::<Vec<_>>()
-            .await
-            .into_iter()
-            .flatten()
-            .collect::<Option<Vec<_>>>();
-
-        if let Some(fs) = crop_filters {
-            trace!("Crop filters: {fs:?}");
-            fs
-        } else {
-            trace!("No crop filters found, skipping");
-            return Ok(file_path.into());
+    let final_crop_filter = match generate_crop_filter(file_path).await {
+        Ok(mut f) => {
+            f.intersect(&CropFilter {
+                width: w,
+                height: h,
+                x: 0,
+                y: 0,
+            });
+            f
+        }
+        Err(e) => {
+            debug!("Failed to generate crop filter: {e:?}");
+            return Err(e);
         }
     };
-
-    let final_crop_filter = CropFilter::intersect_all(crop_filters)
-        .ok_or_else(|| CropError::NoFilters(file_path.to_path_buf()))?;
 
     debug!("Final crop filter: {final_crop_filter:?}");
 
@@ -120,23 +117,29 @@ async fn do_auto_crop_video(file_path: &Path) -> Result<PathBuf, CropError> {
         file_path.with_file_name(format!("{file_name}.ac.{file_extension}"))
     };
 
+    trace!(?new_filename, "Using new filename for file");
+
     let mut cmd = Command::new(Config::global().dependency_paths.ffmpeg_path());
     let res = cmd
         .arg("-y")
         .args(["-loglevel", "panic"])
-        .args(["-i", file_path_str])
+        .arg("-i")
+        .arg(file_path)
         .args(["-vf", &final_crop_filter.to_string()])
         .args(["-map_metadata", "0", "-movflags", "use_metadata_tags"])
         .args(["-preset", "slow"])
         .arg(&new_filename)
-        .output()
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .kill_on_drop(true)
+        .status()
         .await
         .map_err(|e| CropError::CommandError(CmdError::Run(e)))?;
 
-    if !res.status.success() {
-        return Err(CropError::CommandError(CmdError::Failed(
-            format!("Command exited with non-zero exit code, {:?}", res.status),
-            res.into(),
+    if !res.success() {
+        return Err(CropError::CommandError(CmdError::FailedStatus(
+            "Failed to extract crop data from video frames".into(),
+            res,
         )));
     }
 
@@ -145,6 +148,152 @@ async fn do_auto_crop_video(file_path: &Path) -> Result<PathBuf, CropError> {
     }
 
     Ok(new_filename)
+}
+
+async fn generate_crop_filter(file_path: &Path) -> Result<CropFilter, CropError> {
+    debug!(?file_path, "Generating crop filter");
+
+    let tmp_dir = match TempDir::in_tmp_with_prefix("downloader-hub.crop-video-bars.") {
+        Ok(d) => d,
+        Err(e) => return Err(CropError::TempDirError(e)),
+    };
+    trace!(?tmp_dir, "Created temp dir to write frames to");
+
+    let mut cmd = Command::new(Config::global().dependency_paths.ffmpeg_path());
+    let res = cmd
+        .arg("-y")
+        .arg("-i")
+        .arg(file_path)
+        .args(["-vf", "fps=1"])
+        .arg(format!("{}/%0d.jpg", tmp_dir.path().to_string_lossy()))
+        .kill_on_drop(true);
+    debug!(cmd = ?res.as_std(), "Running command to split video into frames");
+    let res = res
+        .output()
+        .await
+        .map_err(|e| CropError::CommandError(CmdError::Run(e)))?;
+
+    if !res.status.success() {
+        return Err(CropError::CommandError(CmdError::Failed(
+            "Failed to convert video to frames".into(),
+            res.into(),
+        )));
+    }
+
+    debug!("Generated frames successfully");
+
+    let files_in_tmp_dir = {
+        let tmp_path = tmp_dir.path();
+        debug!(?tmp_path, "Listing frame files in temp dir");
+        let mut dir_iter = fs::read_dir(tmp_path)
+            .await
+            .map_err(CropError::TempDirError)?;
+
+        let mut entries = Vec::new();
+        while let Ok(Some(entry)) = dir_iter.next_entry().await {
+            let path_in_temp_dir = entry.path();
+
+            let file_name = match path_in_temp_dir.file_name() {
+                Some(x) => x,
+                None => continue,
+            };
+
+            let path_in_dir = tmp_path.join(file_name);
+
+            entries.push(path_in_dir);
+        }
+        trace!(?entries, "Found all frame files in directory");
+        entries
+    };
+
+    let filter = generate_crop_filter_for_files(&files_in_tmp_dir, None).await?;
+    debug!(?filter, "Got crop filter");
+
+    Ok(filter)
+}
+
+async fn generate_crop_filter_for_files(
+    files: &[PathBuf],
+    initial_filter: Option<&CropFilter>,
+) -> Result<CropFilter, CropError> {
+    const TRIM_PASSES: u8 = 2;
+    let mut cmd = Command::new(
+        Config::global()
+            .dependency_paths
+            .imagemagick_path()
+            .expect("Imagemagick not found"),
+    );
+    let res = {
+        let mut res = cmd.args(files);
+        if let Some(filter) = initial_filter {
+            res = res.arg("-crop").arg(filter.to_imagemagick_dimensions());
+        }
+        for _ in 0..TRIM_PASSES {
+            res = res.args(["-fuzz", "15%"]).arg("-trim");
+        }
+        res.args(["-format", "%w:%h:%X:%Y\n"]).arg("info:-")
+    };
+    debug!(
+        cmd = ?res.as_std(),
+        "Running command to generate crop filters"
+    );
+    let mut res = res
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .map_err(|e| CropError::CommandError(CmdError::Run(e)))?;
+
+    let mut res_stdout_lines = {
+        let stdout = res.stdout.take().expect("stdout should be available");
+        let reader = BufReader::new(stdout);
+        reader.lines()
+    };
+
+    let filter = {
+        let parse_line = |line: &str| {
+            let mut s = line.split(':');
+            let mut next_s = || {
+                s.next()
+                    .and_then(|x| x.trim_start_matches('+').to_string().parse::<i64>().ok())
+            };
+
+            Some(CropFilter {
+                width: next_s()?,
+                height: next_s()?,
+                x: next_s()?,
+                y: next_s()?,
+            })
+        };
+
+        trace!("Reading crop filter command output lines");
+        let mut filter = CropFilter::new_min();
+        while let Ok(Some(line)) = res_stdout_lines.next_line().await {
+            let Some(line_filter) = parse_line(&line) else {
+                trace!(?line, "Couldn't parse line, skipping");
+                continue;
+            };
+            trace!(?line, ?line_filter, "Parsed line to filter");
+            filter.union(&line_filter);
+        }
+
+        debug!(?filter, "Generated filter from output");
+
+        filter
+    };
+
+    let res = res
+        .wait()
+        .await
+        .map_err(|e| CropError::CommandError(CmdError::Run(e)))?;
+
+    if res.success() {
+        Ok(filter)
+    } else {
+        Err(CropError::CommandError(CmdError::FailedStatus(
+            format!("Command exited with non-zero exit code, {:?}", res),
+            res,
+        )))
+    }
 }
 
 async fn get_video_stream(file_path: &Path) -> Result<Option<ffprobe::Stream>, CropError> {
@@ -160,7 +309,7 @@ async fn get_video_stream(file_path: &Path) -> Result<Option<ffprobe::Stream>, C
     Ok(video_stream.cloned())
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct CropFilter {
     width: i64,
     height: i64,
@@ -169,30 +318,20 @@ struct CropFilter {
 }
 
 impl CropFilter {
+    const fn new_min() -> Self {
+        Self {
+            width: 0,
+            height: 0,
+            x: i64::MAX,
+            y: i64::MAX,
+        }
+    }
+
     fn union(&mut self, other: &Self) {
         self.width = self.width.max(other.width);
         self.height = self.height.max(other.height);
         self.x = self.x.min(other.x);
         self.y = self.y.min(other.y);
-    }
-
-    fn union_all(filters: Vec<Self>) -> Option<Self> {
-        if filters.is_empty() {
-            return None;
-        }
-
-        let mut res = Self {
-            width: i64::MIN,
-            height: i64::MIN,
-            x: i64::MAX,
-            y: i64::MAX,
-        };
-
-        for filter in filters {
-            res.union(&filter);
-        }
-
-        Some(res)
     }
 
     fn intersect(&mut self, other: &Self) {
@@ -202,23 +341,18 @@ impl CropFilter {
         self.y = self.y.max(other.y);
     }
 
-    fn intersect_all(filters: Vec<Self>) -> Option<Self> {
-        if filters.is_empty() {
-            return None;
+    fn to_imagemagick_dimensions(&self) -> String {
+        let mut x = self.x.to_string();
+        if self.x >= 0 {
+            x = format!("+{}", x);
         }
 
-        let mut res = Self {
-            width: i64::MAX,
-            height: i64::MAX,
-            x: i64::MIN,
-            y: i64::MIN,
-        };
-
-        for filter in filters {
-            res.intersect(&filter);
+        let mut y = self.y.to_string();
+        if self.y >= 0 {
+            y = format!("+{}", y);
         }
 
-        Some(res)
+        format!("{}x{}{}{}", self.width, self.height, x, y)
     }
 }
 
@@ -235,86 +369,6 @@ impl Display for CropFilter {
     }
 }
 
-#[derive(Debug, Clone)]
-enum BorderColor {
-    White,
-    Black,
-}
-
-async fn get_crop_filter(
-    file_path: &str,
-    border_color: &BorderColor,
-) -> Result<Option<CropFilter>, String> {
-    let cropdetect_filter = {
-        let mut filters = vec![];
-
-        // filters.push("eq=contrast=1.5");
-
-        match border_color {
-            BorderColor::White => {
-                filters.push("negate");
-            }
-            BorderColor::Black => {}
-        };
-
-        // skip=0
-        filters.push("cropdetect=mode=black:limit=24:round=2:reset=0");
-
-        filters.join(",")
-    };
-
-    let mut cmd = Command::new(Config::global().dependency_paths.ffmpeg_path());
-    let cmd = cmd
-        .arg("-hide_banner")
-        .args(["-i", file_path])
-        .args(["-vf", cropdetect_filter.as_str()])
-        .args(["-f", "null", "-"]);
-    trace!("Running command {cmd:?}");
-
-    let cmd_output = cmd
-        .output()
-        .await
-        .map_err(|e| format!("Failed to run command {cmd:?}: {e:?}"))?;
-    trace!("Command output: {:?}", &cmd_output);
-    let stderr = String::from_utf8(cmd_output.stderr)
-        .map_err(|e| format!("Failed to convert command output to UTF-8: {e:?}"))?;
-
-    let mut res = stderr
-        .split('\n')
-        .filter(|s| s.starts_with("[Parsed_cropdetect") && s.contains("crop="))
-        .map(str::trim)
-        .map(|s| {
-            s.split("crop=")
-                .nth(1)
-                .ok_or_else(|| format!("Failed to parse cropdetect output from {s:?}"))
-        })
-        .collect::<Result<Vec<_>, _>>()?;
-
-    res.sort_unstable();
-    res.dedup();
-
-    let res = res
-        .iter()
-        .map(|s| {
-            let mut s = s.split(':');
-            let mut next_s = || {
-                s.next()
-                    .and_then(|x| x.to_string().parse::<i64>().ok())
-                    .ok_or_else(|| format!("Failed to parse width from {s:?}"))
-            };
-
-            Ok(CropFilter {
-                width: next_s()?,
-                height: next_s()?,
-                x: next_s()?,
-                y: next_s()?,
-            })
-        })
-        .collect::<Result<Vec<_>, String>>()?;
-
-    Ok(CropFilter::union_all(res))
-}
-
 #[derive(Debug, Error)]
 pub enum CropError {
     #[error("Invalid path: {0:?}")]
@@ -329,6 +383,8 @@ pub enum CropError {
     NoFilePart(String, PathBuf),
     #[error("No filters found for {0:?}")]
     NoFilters(PathBuf),
+    #[error("Failed to create temp dir")]
+    TempDirError(std::io::Error),
 }
 
 impl From<CropError> for FixerError {

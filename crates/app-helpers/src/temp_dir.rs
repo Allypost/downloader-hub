@@ -7,6 +7,7 @@ use std::{
 
 use super::id::time_thread_id;
 
+#[derive(Debug)]
 pub struct TempDir {
     path: PathBuf,
     delete_on_drop: bool,

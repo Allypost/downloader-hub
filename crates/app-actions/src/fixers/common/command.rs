@@ -1,4 +1,4 @@
-use std::process::Output;
+use std::process::{ExitStatus, Output};
 
 use thiserror::Error;
 
@@ -61,6 +61,8 @@ pub enum CmdError {
         output = .1.stderr(),
     )]
     Failed(String, CmdOutput),
+    #[error("Command {0} failed with status {1:?}")]
+    FailedStatus(String, ExitStatus),
     #[error(transparent)]
     Decode(#[from] CmdOutputErr),
 }
