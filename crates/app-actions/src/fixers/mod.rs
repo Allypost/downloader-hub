@@ -51,7 +51,7 @@ pub async fn fix_file(request: FixRequest) -> FixerReturn {
     fix_file_with(ENABLED_FIXERS.clone(), request).await
 }
 
-#[tracing::instrument(skip(fixers))]
+#[tracing::instrument(skip(request))]
 pub async fn fix_file_with(fixers: Vec<FixerInstance>, request: FixRequest) -> FixerReturn {
     let request = request.resolve_path()?.check_path()?;
     debug!(?request, "Fixing file");

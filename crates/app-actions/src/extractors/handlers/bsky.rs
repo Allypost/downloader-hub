@@ -4,13 +4,12 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, trace};
 use url::Url;
 
+use super::{twitter::Twitter, ExtractInfoRequest, ExtractedInfo, Extractor};
 use crate::{
     common::request::Client,
     downloaders::handlers::{generic::Generic, yt_dlp::YtDlp},
     extractors::ExtractedUrlInfo,
 };
-
-use super::{twitter::Twitter, ExtractInfoRequest, ExtractedInfo, Extractor};
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Bsky;

@@ -136,7 +136,7 @@ async fn get_api_response(post_id: &str) -> Result<InstagramXDTGraphMedia, Strin
     let media = resp.get("data").and_then(|x| x.get("xdt_shortcode_media"));
     trace!(?media, "Got media");
 
-    if let Some(serde_json::Value::Null) = media {
+    if media.is_some_and(serde_json::Value::is_null) {
         debug!("No media found. Post is probably age restricted.");
         return Err("No media found. Post is probably age restricted.".to_string());
     }
