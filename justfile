@@ -28,6 +28,21 @@ dev-watch-cli *args: (dev-watch 'downloader-cli' args)
 
 dev-watch-telegram-bot *args: (dev-watch 'downloader-telegram-bot' args)
 
+dev-watch-build package:
+    RUSTFLAGS='{{rustflags}}' \
+    cargo watch \
+        --clear \
+        --quiet \
+        --watch './crates' \
+        --ignore 'crates/app-migration/**/*' \
+        --exec 'build --target "{{rust_target}}" --package "{{package}}"' \
+
+dev-watch-build-server: (dev-watch-build 'downloader-hub')
+
+dev-watch-build-cli: (dev-watch-build 'downloader-cli')
+
+dev-watch-build-telegram-bot: (dev-watch-build 'downloader-telegram-bot')
+
 dev-run package *args:
     RUSTFLAGS='{{rustflags}}' \
     cargo run \
