@@ -217,6 +217,10 @@ async fn generate_crop_filter_for_files(
     initial_filter: Option<&CropFilter>,
 ) -> Result<CropFilter, CropError> {
     const TRIM_PASSES: u8 = 2;
+    const FUZZ_PERCENTAGE: u8 = 15;
+    const SHAVE_BORDER_PIXELS: u8 = 2;
+    const MIN_WIDTH: i64 = 4;
+    const MIN_HEIGHT: i64 = 4;
     let mut cmd = Command::new(
         Config::global()
             .dependency_paths
@@ -227,9 +231,17 @@ async fn generate_crop_filter_for_files(
         let mut res = cmd.args(files);
         if let Some(filter) = initial_filter {
             res = res.arg("-crop").arg(filter.to_imagemagick_dimensions());
+        } else {
+            // Remove small outside border to encourage better trimmming
+            res = res.args([
+                "-shave".to_string(),
+                format!("{px}x{px}", px = SHAVE_BORDER_PIXELS),
+            ]);
         }
         for _ in 0..TRIM_PASSES {
-            res = res.args(["-fuzz", "15%"]).arg("-trim");
+            res = res
+                .args(["-fuzz".to_string(), format!("{}%", FUZZ_PERCENTAGE)])
+                .arg("-trim");
         }
         res.args(["-format", "%w:%h:%X:%Y\n"]).arg("info:-")
     };
@@ -272,6 +284,17 @@ async fn generate_crop_filter_for_files(
                 trace!(?line, "Couldn't parse line, skipping");
                 continue;
             };
+
+            if line_filter.width < MIN_WIDTH || line_filter.height < MIN_HEIGHT {
+                trace!(?line, ?line_filter, "Filter is too small, skipping");
+                continue;
+            }
+
+            if line_filter.x < 0 || line_filter.y < 0 {
+                trace!(?line, ?line_filter, "Filter has negative offset, skipping");
+                continue;
+            }
+
             trace!(?line, ?line_filter, "Parsed line to filter");
             filter.union(&line_filter);
         }
