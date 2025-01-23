@@ -46,10 +46,10 @@ WORKDIR /app
 ## Generate a build plan for rust dependencies
 ##
 FROM chef AS planner
-COPY . .
+WORKDIR /chef
 # Generate "lockfile" aka dependency dump
-RUN cargo chef prepare \
-  --recipe-path recipe.json
+RUN --mount=type=bind,target=. cargo chef prepare \
+  --recipe-path /app/recipe.json
 
 
 ##########
@@ -71,12 +71,11 @@ RUN cd "$(mktemp --directory)" && \
   cd .. && \
   rm -rf "$(pwd)" && \
   echo "Installed upx"
-COPY --from=planner /app/recipe.json .
 # Build dependencies
 ARG RUST_TARGET
 ARG APP_FEATURES
 ARG BINARY_NAME
-RUN cargo chef cook \
+RUN --mount=from=planner,source=/app/recipe.json,target=/app/recipe.json cargo chef cook \
   --release \
   --target "${RUST_TARGET}" \
   --features "${APP_FEATURES}" \
@@ -86,16 +85,18 @@ ARG RUST_TARGET
 RUN rustup target add "${RUST_TARGET}"
 # Copy rest of files and compile
 # only the remaining app code
-COPY . .
 ARG RUST_TARGET
 ARG APP_FEATURES
 ARG BINARY_NAME
-RUN cargo build \
+RUN --mount=type=bind,target=.,rw cargo build \
   --release \
   --target "${RUST_TARGET}" \
   --features "${APP_FEATURES}" \
-  --package "${BINARY_NAME}"
-RUN upx --best --lzma "/app/target/${RUST_TARGET}/release/${BINARY_NAME}"
+  --package "${BINARY_NAME}" \
+  && upx --best --lzma \
+  "/app/target/${RUST_TARGET}/release/${BINARY_NAME}" \
+  -o /"${BINARY_NAME}" \
+  ;
 
 
 ##########
@@ -170,9 +171,8 @@ ARG RUN_GROUP_ID
 RUN groupadd --gid "${RUN_GROUP_ID}" "${RUN_USERNAME}"
 RUN useradd --create-home --uid "${RUN_USER_ID}" --gid "${RUN_GROUP_ID}" "${RUN_USERNAME}"
 # Install app
-ARG RUST_TARGET
 ARG BINARY_NAME
-COPY --from=builder "/app/target/${RUST_TARGET}/release/${BINARY_NAME}" /usr/local/bin/
+COPY --from=builder "/${BINARY_NAME}" /usr/local/bin/
 RUN chmod a=rx "/usr/local/bin/${BINARY_NAME}"
 # Run app
 RUN echo "#!/bin/bash\n\n/usr/local/bin/${BINARY_NAME} \"\$@\"" > /entrypoint.sh && chmod +x /entrypoint.sh
