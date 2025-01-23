@@ -302,9 +302,7 @@ async fn copy_file_to_cache_folder(
 }
 
 fn path_has_extension(path: &Path, wanted_extension: &str) -> bool {
-    path.extension()
-        .and_then(std::ffi::OsStr::to_str)
-        .map_or(false, |extension| extension == wanted_extension)
+    path.extension().and_then(std::ffi::OsStr::to_str) == Some(wanted_extension)
 }
 
 fn file_name_with_suffix_extension(path: &Path, suffix: &str) -> Option<PathBuf> {
@@ -367,14 +365,14 @@ const CODEC_HANDLERS: &[CodecHandler] = &[
                 let video_codec_ok = video_stream
                     .codec_name
                     .as_ref()
-                    .map_or(false, |vcodec| vcodec == "h264");
+                    .is_some_and(|vcodec| vcodec == "h264");
 
                 let audio_codec_ok =
                     get_stream_of_type(&file_format_info, "audio").map_or(true, |audio_stream| {
                         audio_stream
                             .codec_name
                             .as_ref()
-                            .map_or(false, |acodec| acodec == "aac")
+                            .is_some_and(|acodec| acodec == "aac")
                     });
 
                 let extension_ok = path_has_extension(&file_path, "mp4");
