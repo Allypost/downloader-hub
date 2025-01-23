@@ -16,6 +16,9 @@ static HANDLERS: Lazy<Vec<DownloadHandler>> = Lazy::new(|| {
         DownloadHandler::new(yams::YamsProvider),
         DownloadHandler::new(spotifydown::SpotifydownProvider),
     ]
+    .into_iter()
+    .filter(DownloadHandler::enabled)
+    .collect()
 });
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -83,6 +86,11 @@ impl DownloadHandler {
         self.provider.supports(url)
     }
 
+    #[must_use]
+    pub fn enabled(&self) -> bool {
+        self.provider.enabled()
+    }
+
     pub async fn download(&self, download_dir: &Path, url: &Url) -> Result<PathBuf, anyhow::Error> {
         self.provider.download(download_dir, url).await
     }
@@ -93,4 +101,8 @@ trait Handler: std::fmt::Debug + Send + Sync {
     async fn download(&self, download_dir: &Path, song_url: &Url) -> anyhow::Result<PathBuf>;
 
     fn supports(&self, song_url: &Url) -> bool;
+
+    fn enabled(&self) -> bool {
+        true
+    }
 }

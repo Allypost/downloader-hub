@@ -62,6 +62,11 @@ impl Handler for SpotifydownProvider {
 
         root == "spotify.com"
     }
+
+    // Disabled because site added captcha
+    fn enabled(&self) -> bool {
+        false
+    }
 }
 
 impl SpotifydownProvider {
