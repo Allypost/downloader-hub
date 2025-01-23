@@ -10,6 +10,8 @@ ARG RUN_GROUP_ID='1000'
 
 ARG FFMPEG_DOWNLOAD_URL='https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz'
 
+ARG RUNNER_CONTAINER="ubuntu:latest"
+
 ##########
 # Step 0 #
 ##########
@@ -100,9 +102,34 @@ RUN upx --best --lzma "/app/target/${RUST_TARGET}/release/${BINARY_NAME}"
 # Step 3 #
 ##########
 ##
+## Build imagemagick
+##
+FROM "${RUNNER_CONTAINER}" AS imagemagick-builder
+COPY ./.docker/app/packelf.sh /packelf.sh
+# Install imagemagick
+RUN \
+  apt-get update \
+  && apt-get install -y \
+  curl \
+  # Build latest imagemagick
+  && t=$(mktemp) \
+  && curl -sL 'https://dist.1-2.dev/imei.sh' -o "$t" \
+  && bash "$t" -- --ci \
+  && rm "$t" \
+  && mkdir /static \
+  # Pack dynamically linked magick into static binary via fun hacks
+  && /packelf.sh "$(which magick)" /static/magick \
+  ;
+
+
+
+##########
+# Step 4 #
+##########
+##
 ## Run the app in a configured environment
 ##
-FROM ubuntu:latest AS runner
+FROM "${RUNNER_CONTAINER}" AS runner
 RUN apt-get update && apt-get install -y \
   sudo \
   curl \
@@ -121,7 +148,6 @@ RUN cd "$(mktemp --directory)" && \
   && mv ffmpeg ffprobe qt-faststart /usr/local/bin/ \
   && cd .. \
   && rm -rf "$(pwd)"
-COPY --from=index.docker.io/dpokidov/imagemagick:latest /usr/local/bin/magick /usr/local/bin/magick
 # Install latest phantomjs (yt-dlp uses as a helper)
 ENV OPENSSL_CONF=/dev/null
 RUN mkdir -p /usr/share \
@@ -133,6 +159,8 @@ RUN mkdir -p /usr/share \
 COPY ./.docker/app/update_yt-dlp.sh /usr/bin/update_yt-dlp.sh
 RUN chmod a=rx /usr/bin/update_yt-dlp.sh
 RUN /usr/bin/update_yt-dlp.sh
+# Install imagemagick
+COPY --from=imagemagick-builder /static/magick /usr/local/bin/magick
 # Delete default ubuntu user
 RUN userdel --remove ubuntu; groupdel ubuntu; echo "Deleted default ubuntu user"
 # Create run user
