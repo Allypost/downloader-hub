@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::{ExtractInfoRequest, ExtractedInfo, Extractor};
-use crate::downloaders::handlers::yt_dlp::YtDlp;
+use crate::downloaders::handlers::{generic::Generic, yt_dlp::YtDlp};
 
 #[must_use]
 pub fn is_reddit_image_url(url: &str) -> bool {
@@ -23,14 +23,30 @@ impl Extractor for Reddit {
     }
 
     async fn extract_info(&self, request: &ExtractInfoRequest) -> Result<ExtractedInfo, String> {
-        Ok(ExtractedInfo::from_url(request, request.url.as_str())
-            .with_preferred_downloader(Some(YtDlp)))
+        let url = {
+            let mut x = request.url.clone();
+            let _ = x.set_host(Some("i.redd.it"));
+            x.set_query(None);
+            x
+        };
+        let file_ext = url.path().split('.').last().unwrap_or_default();
+        let info = {
+            let x = ExtractedInfo::from_url(request, url.as_str());
+            match file_ext {
+                "jpg" | "jpeg" | "png" | "gif" | "webp" | "bmp" | "tiff" | "tif" | "ico" => {
+                    x.with_preferred_downloader(Some(Generic))
+                }
+                _ => x.with_preferred_downloader(Some(YtDlp)),
+            }
+        };
+
+        Ok(info)
     }
 }
 
 impl Reddit {
     #[must_use]
     pub fn is_media_url(url: &str) -> bool {
-        url.starts_with("https://i.redd.it/")
+        url.starts_with("https://i.redd.it/") || url.starts_with("https://preview.redd.it/")
     }
 }
