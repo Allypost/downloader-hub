@@ -1,6 +1,5 @@
 use std::{
     ffi::OsStr,
-    fmt::Display,
     path::{Path, PathBuf},
     process::Stdio,
 };
@@ -8,16 +7,15 @@ use std::{
 use app_config::Config;
 use app_helpers::{ffprobe, temp_dir::TempDir, trash::move_to_trash};
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
-use tokio::{
-    fs,
-    io::{AsyncBufReadExt, BufReader},
-    process::Command,
-};
+use tokio::{fs, process::Command};
 use tracing::{debug, trace, warn};
 
 use crate::fixers::{
-    common::{command::CmdError, FixRequest, FixResult, FixerError},
+    common::{
+        command::CmdError,
+        crop_filter::{CropError, CropFilter},
+        FixRequest, FixResult,
+    },
     Fixer, FixerReturn, IntoFixerReturn,
 };
 
@@ -35,11 +33,18 @@ impl Fixer for CropVideoBars {
     }
 
     async fn can_run_for(&self, request: &FixRequest) -> bool {
-        get_video_stream(&request.file_path)
-            .await
-            .ok()
-            .flatten()
-            .is_some()
+        let Ok(media_info) = ffprobe::ffprobe_async(&request.file_path).await else {
+            return false;
+        };
+
+        if media_info.format.format_name == "image2" {
+            return false;
+        }
+
+        media_info
+            .streams
+            .iter()
+            .any(|s| s.codec_type.as_ref().is_some_and(|x| x == "video"))
     }
 
     fn description(&self) -> &'static str {
@@ -206,117 +211,10 @@ async fn generate_crop_filter(file_path: &Path) -> Result<CropFilter, CropError>
         entries
     };
 
-    let filter = generate_crop_filter_for_files(&files_in_tmp_dir, None).await?;
+    let filter = CropFilter::from_image_files(&files_in_tmp_dir).await?;
     debug!(?filter, "Got crop filter");
 
     Ok(filter)
-}
-
-async fn generate_crop_filter_for_files(
-    files: &[PathBuf],
-    initial_filter: Option<&CropFilter>,
-) -> Result<CropFilter, CropError> {
-    const TRIM_PASSES: u8 = 2;
-    const FUZZ_PERCENTAGE: u8 = 15;
-    const SHAVE_BORDER_PIXELS: u8 = 2;
-    const MIN_WIDTH: i64 = 4;
-    const MIN_HEIGHT: i64 = 4;
-    let mut cmd = Command::new(
-        Config::global()
-            .dependency_paths
-            .imagemagick_path()
-            .expect("Imagemagick not found"),
-    );
-    let res = {
-        let mut res = cmd.args(files);
-        if let Some(filter) = initial_filter {
-            res = res.arg("-crop").arg(filter.to_imagemagick_dimensions());
-        } else {
-            // Remove small outside border to encourage better trimmming
-            res = res.args([
-                "-shave".to_string(),
-                format!("{px}x{px}", px = SHAVE_BORDER_PIXELS),
-            ]);
-        }
-        for _ in 0..TRIM_PASSES {
-            res = res
-                .args(["-fuzz".to_string(), format!("{}%", FUZZ_PERCENTAGE)])
-                .arg("-trim");
-        }
-        res.args(["-format", "%w:%h:%X:%Y\n"]).arg("info:-")
-    };
-    debug!(
-        cmd = ?res.as_std(),
-        "Running command to generate crop filters"
-    );
-    let mut res = res
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .spawn()
-        .map_err(|e| CropError::CommandError(CmdError::Run(e)))?;
-
-    let mut res_stdout_lines = {
-        let stdout = res.stdout.take().expect("stdout should be available");
-        let reader = BufReader::new(stdout);
-        reader.lines()
-    };
-
-    let filter = {
-        let parse_line = |line: &str| {
-            let mut s = line.split(':');
-            let mut next_s = || {
-                s.next()
-                    .and_then(|x| x.trim_start_matches('+').to_string().parse::<i64>().ok())
-            };
-
-            Some(CropFilter {
-                width: next_s()?,
-                height: next_s()?,
-                x: next_s()?,
-                y: next_s()?,
-            })
-        };
-
-        trace!("Reading crop filter command output lines");
-        let mut filter = CropFilter::new_min();
-        while let Ok(Some(line)) = res_stdout_lines.next_line().await {
-            let Some(line_filter) = parse_line(&line) else {
-                trace!(?line, "Couldn't parse line, skipping");
-                continue;
-            };
-
-            if line_filter.width < MIN_WIDTH || line_filter.height < MIN_HEIGHT {
-                trace!(?line, ?line_filter, "Filter is too small, skipping");
-                continue;
-            }
-
-            if line_filter.x < 0 || line_filter.y < 0 {
-                trace!(?line, ?line_filter, "Filter has negative offset, skipping");
-                continue;
-            }
-
-            trace!(?line, ?line_filter, "Parsed line to filter");
-            filter.union(&line_filter);
-        }
-
-        debug!(?filter, "Generated filter from output");
-
-        filter
-    };
-
-    let res = res
-        .wait()
-        .await
-        .map_err(|e| CropError::CommandError(CmdError::Run(e)))?;
-
-    if res.success() {
-        Ok(filter)
-    } else {
-        Err(CropError::CommandError(CmdError::FailedStatus(
-            format!("Command exited with non-zero exit code, {:?}", res),
-            res,
-        )))
-    }
 }
 
 async fn get_video_stream(file_path: &Path) -> Result<Option<ffprobe::Stream>, CropError> {
@@ -329,95 +227,7 @@ async fn get_video_stream(file_path: &Path) -> Result<Option<ffprobe::Stream>, C
         .iter()
         .find(|s| s.codec_type.as_ref().is_some_and(|x| x == "video"));
 
+    trace!(?video_stream, "Video stream");
+
     Ok(video_stream.cloned())
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct CropFilter {
-    width: i64,
-    height: i64,
-    x: i64,
-    y: i64,
-}
-
-impl CropFilter {
-    const fn new_min() -> Self {
-        Self {
-            width: 0,
-            height: 0,
-            x: i64::MAX,
-            y: i64::MAX,
-        }
-    }
-
-    fn union(&mut self, other: &Self) {
-        self.width = self.width.max(other.width);
-        self.height = self.height.max(other.height);
-        self.x = self.x.min(other.x);
-        self.y = self.y.min(other.y);
-    }
-
-    fn intersect(&mut self, other: &Self) {
-        self.width = self.width.min(other.width);
-        self.height = self.height.min(other.height);
-        self.x = self.x.max(other.x);
-        self.y = self.y.max(other.y);
-    }
-
-    fn to_imagemagick_dimensions(&self) -> String {
-        let mut x = self.x.to_string();
-        if self.x >= 0 {
-            x = format!("+{}", x);
-        }
-
-        let mut y = self.y.to_string();
-        if self.y >= 0 {
-            y = format!("+{}", y);
-        }
-
-        format!("{}x{}{}{}", self.width, self.height, x, y)
-    }
-}
-
-impl Display for CropFilter {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "crop={width}:{height}:{x}:{y}",
-            width = self.width,
-            height = self.height,
-            x = self.x,
-            y = self.y
-        )
-    }
-}
-
-#[derive(Debug, Error)]
-pub enum CropError {
-    #[error("Invalid path: {0:?}")]
-    InvalidPath(PathBuf, String),
-    #[error(transparent)]
-    FfProbeError(#[from] ffprobe::FfProbeError),
-    #[error(transparent)]
-    CommandError(#[from] CmdError),
-    #[error("Failed to get width and height of media")]
-    NoDimensions(PathBuf),
-    #[error("Failed to get file {0} from {1:?}")]
-    NoFilePart(String, PathBuf),
-    #[error("No filters found for {0:?}")]
-    NoFilters(PathBuf),
-    #[error("Failed to create temp dir")]
-    TempDirError(std::io::Error),
-}
-
-impl From<CropError> for FixerError {
-    fn from(val: CropError) -> Self {
-        Self::FailedFix(val.into())
-    }
-}
-
-impl IntoFixerReturn for CropError {
-    fn into_fixer_return(self) -> FixerReturn {
-        Err(FixerError::FailedFix(self.into()))
-    }
 }

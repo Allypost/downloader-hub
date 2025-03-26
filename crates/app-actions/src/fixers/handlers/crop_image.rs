@@ -1,10 +1,12 @@
 use app_config::Config;
-use app_helpers::file_type;
+use app_helpers::{file_type, trash::move_to_trash};
 use serde::{Deserialize, Serialize};
 use tokio::process::Command;
-use tracing::warn;
+use tracing::{debug, warn};
 
-use crate::fixers::{FixRequest, FixResult, Fixer, FixerError, FixerReturn};
+use crate::fixers::{
+    common::crop_filter::CropFilter, FixRequest, FixResult, Fixer, FixerError, FixerReturn,
+};
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct CropImage;
@@ -24,10 +26,6 @@ impl Fixer for CropImage {
          quite aggressively."
     }
 
-    fn enabled_by_default(&self) -> bool {
-        false
-    }
-
     async fn can_run_for(&self, request: &FixRequest) -> bool {
         let path = request.file_path.clone();
         tokio::task::spawn_blocking(move || file_type::infer_file_type(&path).ok())
@@ -38,6 +36,9 @@ impl Fixer for CropImage {
     }
 
     async fn run(&self, request: &FixRequest) -> FixerReturn {
+        debug!(path = ?request.file_path, "Auto cropping image");
+
+        let input_file_path = &request.file_path;
         let output_file_path = {
             let path = request.file_path.clone();
             let mut file_name = path.file_stem().unwrap_or_default().to_os_string();
@@ -49,17 +50,26 @@ impl Fixer for CropImage {
             path.with_file_name(file_name)
         };
 
-        let mut cmd = Command::new(
-            Config::global()
-                .dependency_paths
-                .imagemagick_path()
-                .expect("Imagemagick not found"),
-        );
-        cmd.arg(&request.file_path);
-        cmd.args(["-fuzz", "15%"]);
-        cmd.arg("-trim");
-        cmd.arg("+repage");
-        cmd.arg(&output_file_path);
+        let crop_filter = CropFilter::from_image_files(&[input_file_path.clone()]).await?;
+
+        debug!(?crop_filter, "Got crop filter");
+
+        let mut cmd = {
+            let mut cmd = Command::new(
+                Config::global()
+                    .dependency_paths
+                    .imagemagick_path()
+                    .expect("Imagemagick not found"),
+            );
+            cmd.arg(input_file_path);
+            cmd.arg("-crop")
+                .arg(crop_filter.to_imagemagick_dimensions());
+            cmd.arg("+repage");
+            cmd.arg(&output_file_path);
+            cmd
+        };
+
+        debug!(?cmd, "Running command to crop image");
 
         let output = cmd
             .output()
@@ -67,6 +77,7 @@ impl Fixer for CropImage {
             .map_err(|e| FixerError::CommandError(e.into()))?;
 
         if !output.status.success() {
+            debug!(status = ?output.status, "Failed to crop image");
             return Err(FixerError::CommandError(
                 anyhow::anyhow!(format!(
                     "Imagemagick returned an error: {}",
@@ -78,8 +89,8 @@ impl Fixer for CropImage {
 
         if !output_file_path.exists() {
             warn!(
-                "Imagemagick did not create the output file {path:?}",
-                path = output_file_path
+                path = ?output_file_path,
+                "Imagemagick did not create the output file",
             );
             return Err(FixerError::FailedFix(
                 anyhow::anyhow!(format!(
@@ -88,6 +99,10 @@ impl Fixer for CropImage {
                 ))
                 .into(),
             ));
+        }
+
+        if let Err(e) = move_to_trash(input_file_path) {
+            warn!(file = ?input_file_path, ?e, "Failed to move file to trash");
         }
 
         Ok(FixResult::new(request.clone(), output_file_path))

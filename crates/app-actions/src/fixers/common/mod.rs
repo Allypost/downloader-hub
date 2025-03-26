@@ -1,4 +1,5 @@
 pub mod command;
+pub mod crop_filter;
 pub mod fix_request;
 pub mod fix_result;
 pub mod fixer_error;
